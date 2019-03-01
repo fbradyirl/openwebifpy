@@ -6,3 +6,8 @@ History
 ------------------
 
 * Move to new repo.
+
+1.0.5 (2019-03-01)
+------------------
+
+* First travis deploy
