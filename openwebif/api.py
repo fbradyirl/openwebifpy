@@ -30,6 +30,7 @@ URL_STATUS_INFO = "/api/statusinfo"
 URL_EPG_NOW = "/api/epgnow?bRef="
 URL_GET_ALL_SERVICES = "/api/getallservices"
 URL_GET_ALL_BOUQUETS = "/api/bouquets"
+URL_ZAP_TO_SOURCE = "/api/zap?sRef="
 
 # Remote control commands
 URL_REMOTE_CONTROL = "/api/remotecontrol?command="
@@ -107,6 +108,8 @@ class CreateDevice(object):
             self._first_bouquet = all_bouquets['bouquets'][0][0]
             first_bouquet_name = all_bouquets['bouquets'][0][1]
             log.debug("First bouquet name is: '%s'", first_bouquet_name)
+
+        self.sources = self.get_bouquet_sources()
 
     def set_volume(self, new_volume):
         """
@@ -446,6 +449,15 @@ class CreateDevice(object):
     def get_all_bouquets(self):
 
         url = '{}{}'.format(self._base, URL_GET_ALL_BOUQUETS)
+        return self._call_api(url)
+
+    def select_source(self, source):
+        """
+        Change channel to selected source
+
+        :param source:
+        """
+        url = '{}{}{}'.format(self._base, URL_ZAP_TO_SOURCE, source)
         return self._call_api(url)
 
     def _call_api(self, url):

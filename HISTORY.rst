@@ -12,7 +12,10 @@ History
 
 * First travis deploy
 
-
 1.0.6 (2019-03-04)
 ------------------
 * added get_bouquet_sources
+
+1.0.7 (2019-03-04)
+------------------
+* Load src on startup + add select source
