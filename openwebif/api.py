@@ -20,13 +20,16 @@ from requests.exceptions import ConnectionError as ReConnError
 from openwebif.constants import DEFAULT_PORT
 from openwebif.error import OpenWebIfError, MissingParamError
 
-_LOGGER = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 URL_ABOUT = "/web/about"
 URL_TOGGLE_VOLUME_MUTE = "/web/vol?set=mute"
 URL_SET_VOLUME = "/api/vol?set=set"
 URL_TOGGLE_STANDBY = "/api/powerstate?newstate=0"
 URL_STATUS_INFO = "/api/statusinfo"
+URL_EPG_NOW = "/api/epgnow?bRef="
+URL_GET_ALL_SERVICES = "/api/getallservices"
+URL_GET_ALL_BOUQUETS = "/api/bouquets"
 
 # Remote control commands
 URL_REMOTE_CONTROL = "/api/remotecontrol?command="
@@ -52,9 +55,9 @@ def log_response_errors(response):
     Logs problems in a response
     """
 
-    _LOGGER.error("status_code %s", response.status_code)
+    log.error("status_code %s", response.status_code)
     if response.error:
-        _LOGGER.error("error %s", response.error)
+        log.error("error %s", response.error)
 
 
 def enable_logging():
@@ -70,10 +73,10 @@ class CreateDevice(object):
     def __init__(self, host=None, port=DEFAULT_PORT,
                  username=None, password=None, is_https=False):
         enable_logging()
-        _LOGGER.info("Initialising new openwebif client")
+        log.debug("Initialising new openwebif client")
 
         if not host:
-            _LOGGER.error('Missing Openwebif host!')
+            log.error('Missing Openwebif host!')
             raise MissingParamError('Connection to OpenWebIf failed.', None)
 
         self._session = requests.Session()
@@ -89,13 +92,21 @@ class CreateDevice(object):
 
         self._in_standby = False
         try:
-            _LOGGER.info("Going to probe device to test connection")
+            log.debug("Going to probe device to test connection")
             version = self.get_version()
-            _LOGGER.info("Connected OK!")
-            _LOGGER.info("OpenWebIf version %s", version)
+            log.debug("Connected OK.")
+            log.debug("OpenWebIf version %s", version)
 
         except ReConnError as conn_err:
             raise OpenWebIfError('Connection to OpenWebIf failed.', conn_err)
+
+        # load first bouquet
+        all_bouquets = self.get_all_bouquets()
+        self._first_bouquet = None
+        if 'bouquets' in all_bouquets:
+            self._first_bouquet = all_bouquets['bouquets'][0][0]
+            first_bouquet_name = all_bouquets['bouquets'][0][1]
+            log.debug("First bouquet name is: '%s'", first_bouquet_name)
 
     def set_volume(self, new_volume):
         """
@@ -109,7 +120,7 @@ class CreateDevice(object):
                                         "0 and 100"
 
         url = '%s%s%s' % (self._base, URL_SET_VOLUME, str(new_volume))
-        _LOGGER.info('url: %s', url)
+        log.debug('url: %s', url)
 
         return self._check_reponse_result(self._session.get(url))
 
@@ -119,7 +130,7 @@ class CreateDevice(object):
         """
 
         url = '%s%s' % (self._base, URL_TOGGLE_STANDBY)
-        _LOGGER.info('url: %s', url)
+        log.debug('url: %s', url)
 
         result = self._check_reponse_result(self._session.get(url))
         # Update standby
@@ -133,7 +144,7 @@ class CreateDevice(object):
 
         url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
                           COMMAND_VU_PLAY_PAUSE_TOGGLE)
-        _LOGGER.info('url: %s', url)
+        log.debug('url: %s', url)
 
         return self._check_reponse_result(self._session.get(url))
 
@@ -144,7 +155,7 @@ class CreateDevice(object):
 
         url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
                           COMMAND_VU_CHANNEL_UP)
-        _LOGGER.info('url: %s', url)
+        log.debug('url: %s', url)
 
         return self._check_reponse_result(self._session.get(url))
 
@@ -155,7 +166,7 @@ class CreateDevice(object):
 
         url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
                           COMMAND_VU_CHANNEL_DOWN)
-        _LOGGER.info('url: %s', url)
+        log.debug('url: %s', url)
 
         return self._check_reponse_result(self._session.get(url))
 
@@ -164,7 +175,7 @@ class CreateDevice(object):
         Send mute command
         """
         url = '%s%s' % (self._base, URL_TOGGLE_VOLUME_MUTE)
-        _LOGGER.info('url: %s', url)
+        log.debug('url: %s', url)
 
         response = self._session.get(url)
         if response.status_code != 200:
@@ -200,7 +211,7 @@ class CreateDevice(object):
         """
 
         url = '%s%s' % (self._base, URL_ABOUT)
-        _LOGGER.info('url: %s', url)
+        log.debug('url: %s', url)
 
         if timeout is not None:
             response = self._session.get(url, timeout=timeout)
@@ -219,20 +230,20 @@ class CreateDevice(object):
                 result = tree.findall(".//" + element_to_query)
 
                 if len(result) > 0:
-                    _LOGGER.info('element_to_query: %s result: %s',
-                                 element_to_query, result[0])
+                    log.debug('element_to_query: %s result: %s',
+                             element_to_query, result[0])
 
                     return result[0].text.strip()
                 else:
-                    _LOGGER.error(
+                    log.error(
                         'There was a problem finding element: %s',
                         element_to_query)
 
             except AttributeError as attib_err:
-                _LOGGER.error(
+                log.error(
                     'There was a problem finding element:'
                     ' %s AttributeError: %s', element_to_query, attib_err)
-                _LOGGER.error('Entire response: %s', response.content)
+                log.error('Entire response: %s', response.content)
                 return
         return
 
@@ -248,17 +259,17 @@ class CreateDevice(object):
         """
 
         url = '%s%s' % (self._base, URL_STATUS_INFO)
-        _LOGGER.info('url: %s', url)
+        log.debug('url: %s', url)
 
         response = self._session.get(url)
 
         if response.status_code != 200:
-            _LOGGER.info("status_code %s", response.status_code)
+            log.debug("status_code %s", response.status_code)
             log_response_errors(response)
             self._in_standby = True
             raise OpenWebIfError('Connection to OpenWebIf failed.')
 
-        _LOGGER.info('response: %s', response.json())
+        log.debug('response: %s', response.json())
 
         if 'inStandby' in response.json():
             self._in_standby = response.json()['inStandby'] == 'true'
@@ -306,7 +317,7 @@ class CreateDevice(object):
             if 'currservice_station' in cached_info:
                 channel_name = cached_info['currservice_station']
             else:
-                _LOGGER.info('No channel currently playing')
+                log.debug('No channel currently playing')
                 return None
 
         if currservice_serviceref is None:
@@ -322,31 +333,31 @@ class CreateDevice(object):
 
             # As a fallback, send LCD4Linux image (if available)
             url = '%s%s' % (self._base, URL_LCD_4_LINUX)
-            _LOGGER.info('This is a recording, trying url: %s', url)
+            log.debug('This is a recording, trying url: %s', url)
 
         else:
             picon_name = self.get_picon_name(channel_name)
             url = '%s/picon/%s.png' % (self._base, picon_name)
 
         if url in self.cached_urls_which_exist:
-            _LOGGER.info('picon url (already tested): %s', url)
+            log.debug('picon url (already tested): %s', url)
             return url
 
         if self.url_exists(url):
-            _LOGGER.info('picon url: %s', url)
+            log.debug('picon url: %s', url)
             return url
 
         # Last ditch attenpt. If channel ends in HD, lets try
         # and get non HD picon
         if channel_name.lower().endswith('hd'):
             channel_name = channel_name[:-2]
-            _LOGGER.info('Going to look for non HD picon for: %s',
-                         channel_name)
+            log.debug('Going to look for non HD picon for: %s',
+                     channel_name)
             return self.get_current_playing_picon_url(
                 ''.join(channel_name.split()),
                 currservice_serviceref)
 
-        _LOGGER.info('Could not find picon for: %s', channel_name)
+        log.debug('Could not find picon for: %s', channel_name)
         return None
 
     def url_exists(self, url):
@@ -358,8 +369,8 @@ class CreateDevice(object):
         request = self._session.head(url)
         if request.status_code == 200:
             self.cached_urls_which_exist.append(url)
-            _LOGGER.debug('cached_urls_which_exist: %s',
-                          str(self.cached_urls_which_exist))
+            log.debug('cached_urls_which_exist: %s',
+                      str(self.cached_urls_which_exist))
             return True
 
         return False
@@ -373,7 +384,7 @@ class CreateDevice(object):
         :param channel_name: The name of the channel
         :return: the correctly formatted name
         """
-        _LOGGER.info("Getting Picon URL for : " + channel_name)
+        log.debug("Getting Picon URL for : " + channel_name)
 
         channel_name = unicodedata.normalize('NFKD', channel_name) \
             .encode('ASCII', 'ignore')
@@ -395,3 +406,67 @@ class CreateDevice(object):
         """
         return self.get_about(
             element_to_query='e2webifversion', timeout=5)
+
+    def get_bouquet_sources(self, bouquet=None):
+        """
+        Get a dict of source names and sources in the bouquet.
+
+        If bouquet is None, the first bouquet will be read from.
+
+        :param bouquet: The bouquet
+        :return: a dict
+        """
+        sources = {}
+
+        if not bouquet:
+            if self._first_bouquet:
+                bouquet = self._first_bouquet
+            else:
+                return sources
+
+        url = '{}{}{}'.format(self._base, URL_EPG_NOW, bouquet)
+
+        log.debug('url: %s', url)
+        result = self._call_api(url)
+
+        events = result['events']
+        source_names = [src['sname'] for src in events]
+        source_refs = [src['sref'] for src in events]
+
+        sources = dict(zip(source_names, source_refs))
+
+        log.info('sources: %s', sources)
+        return sources
+
+    def get_all_services(self):
+
+        url = '{}{}'.format(self._base, URL_GET_ALL_SERVICES)
+        return self._call_api(url)
+
+    def get_all_bouquets(self):
+
+        url = '{}{}'.format(self._base, URL_GET_ALL_BOUQUETS)
+        return self._call_api(url)
+
+    def _call_api(self, url):
+        """Perform one api request operation."""
+
+        log.info("_call_api : %s" % url)
+        response = self._session.get(url)
+
+        if response.status_code == 200:
+            return response.json()
+
+        if response.status_code == 401:
+            raise Exception("Failed to authenticate "
+                                    "with OpenWebIf "
+                                    "check your "
+                                    "username and password.")
+        elif response.status_code == 404:
+            raise Exception("OpenWebIf responded "
+                                           "with a 404 "
+                                           "from %s", url)
+
+        log.error("Invalid response from "
+                  "OpenWebIf: %s", response)
+        return []

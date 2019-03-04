@@ -37,3 +37,7 @@ class TestAPI(unittest.TestCase):
     #     result = client.is_box_in_standby()
     #     self.assertTrue(result is True or result is False)
 
+    def test_get_sources(self):
+        client = openwebif.api.CreateDevice('vuduo2.local')
+
+        self.assertEqual("OWIF 1.3.6", client.get_bouquet_sources())
