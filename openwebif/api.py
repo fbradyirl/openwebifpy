@@ -31,6 +31,7 @@ URL_EPG_NOW = "/api/epgnow?bRef="
 URL_GET_ALL_SERVICES = "/api/getallservices"
 URL_GET_ALL_BOUQUETS = "/api/bouquets"
 URL_ZAP_TO_SOURCE = "/api/zap?sRef="
+URL_GRAB_720 = "/grab?format=jpg&r=720"
 
 # Remote control commands
 URL_REMOTE_CONTROL = "/api/remotecontrol?command="
@@ -264,20 +265,12 @@ class CreateDevice(object):
         url = '%s%s' % (self._base, URL_STATUS_INFO)
         log.debug('url: %s', url)
 
-        response = self._session.get(url)
+        result = self._call_api(url)
 
-        if response.status_code != 200:
-            log.debug("status_code %s", response.status_code)
-            log_response_errors(response)
-            self._in_standby = True
-            raise OpenWebIfError('Connection to OpenWebIf failed.')
+        if 'inStandby' in result:
+            self._in_standby = result['inStandby'] == 'true'
 
-        log.debug('response: %s', response.json())
-
-        if 'inStandby' in response.json():
-            self._in_standby = response.json()['inStandby'] == 'true'
-
-        return response.json()
+        return result
 
     def get_current_playback_type(self, currservice_serviceref=None):
         """
@@ -305,13 +298,15 @@ class CreateDevice(object):
         return PlaybackType.live
 
     def get_current_playing_picon_url(self, channel_name=None,
-                                      currservice_serviceref=None):
+                                      currservice_serviceref=None,
+                                      screengrab_on_fail=True):
         """
         Return the URL to the picon image for the currently playing channel
 
         :param channel_name: If specified, it will base url on this channel
         name else, fetch latest from get_status_info()
         :param currservice_serviceref: The service_ref for the current service
+        :param screengrab_on_fail: Return screenshot if no picon found
         :return: The URL, or None if not available
         """
         cached_info = None
@@ -342,15 +337,11 @@ class CreateDevice(object):
             picon_name = self.get_picon_name(channel_name)
             url = '%s/picon/%s.png' % (self._base, picon_name)
 
-        if url in self.cached_urls_which_exist:
-            log.debug('picon url (already tested): %s', url)
-            return url
-
         if self.url_exists(url):
             log.debug('picon url: %s', url)
             return url
 
-        # Last ditch attenpt. If channel ends in HD, lets try
+        # Last ditch attempt. If channel ends in HD, lets try
         # and get non HD picon
         if channel_name.lower().endswith('hd'):
             channel_name = channel_name[:-2]
@@ -359,6 +350,12 @@ class CreateDevice(object):
             return self.get_current_playing_picon_url(
                 ''.join(channel_name.split()),
                 currservice_serviceref)
+
+        # Lastly, just return screen grab
+        url = "{}{}".format(self._base, URL_GRAB_720)
+        if self.url_exists(url):
+            log.debug('Instead of picon, returning screen grab url: %s', url)
+            return url
 
         log.debug('Could not find picon for: %s', channel_name)
         return None
@@ -369,6 +366,11 @@ class CreateDevice(object):
         :param url: url to test
         :return: True or False
         """
+
+        if url in self.cached_urls_which_exist:
+            log.debug('picon url (already tested): %s', url)
+            return True
+
         request = self._session.head(url)
         if request.status_code == 200:
             self.cached_urls_which_exist.append(url)

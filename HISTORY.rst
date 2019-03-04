@@ -27,3 +27,7 @@ History
 1.0.9 (2019-03-04)
 ------------------
 * Retry deploy
+
+1.1.0 (2019-03-04)
+------------------
+* Return screenshot URL if no picon
