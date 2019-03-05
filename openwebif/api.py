@@ -464,7 +464,7 @@ class CreateDevice(object):
 
         sources = dict(zip(source_names, source_refs))
 
-        log.info('sources: %s', sources)
+        log.debug('sources: %s', sources)
         return sources
 
     def get_all_services(self):
@@ -489,7 +489,7 @@ class CreateDevice(object):
     def _call_api(self, url):
         """Perform one api request operation."""
 
-        log.info("_call_api : %s" % url)
+        log.debug("_call_api : %s" % url)
         response = self._session.get(url)
 
         if response.status_code == 200:

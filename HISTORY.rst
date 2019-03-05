@@ -51,3 +51,7 @@ History
 1.1.5 (2019-03-05)
 ------------------
 * Adding send stop command
+
+1.1.6 (2019-03-05)
+------------------
+* Debug all the logs
