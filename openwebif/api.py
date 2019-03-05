@@ -282,11 +282,12 @@ class CreateDevice(object):
         if 'inStandby' in result:
             self._in_standby = result['inStandby'] == 'true'
 
-        sref = result['currservice_serviceref']
-        if self.get_current_playback_type(sref) == PlaybackType.recording:
-            # try get correct channel name
-            channel_name = self.get_channel_name_from_serviceref(sref)
-            result['currservice_station'] = channel_name
+        if not self._in_standby:
+            sref = result['currservice_serviceref']
+            if self.get_current_playback_type(sref) == PlaybackType.recording:
+                # try get correct channel name
+                channel_name = self.get_channel_name_from_serviceref(sref)
+                result['currservice_station'] = channel_name
 
         return result
 
