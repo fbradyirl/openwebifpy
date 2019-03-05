@@ -328,9 +328,9 @@ class CreateDevice(object):
             picon_name = self.get_picon_name(channel_name)
             url = '%s/picon/%s.png' % (self._base, picon_name)
 
-        if self.url_exists(url):
-            log.debug('picon url: %s', url)
-            return url
+            if self.url_exists(url):
+                log.debug('picon url: %s', url)
+                return url
 
         # Last ditch attempt. If channel ends in HD, lets try
         # and get non HD picon

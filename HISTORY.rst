@@ -35,3 +35,7 @@ History
 1.1.1 (2019-03-05)
 ------------------
 * Return screenshot URL if recording playback
+
+1.1.2 (2019-03-05)
+------------------
+* Fix bug
