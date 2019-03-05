@@ -39,3 +39,7 @@ History
 1.1.2 (2019-03-05)
 ------------------
 * Fix bug
+
+1.1.3 (2019-03-05)
+------------------
+* adding parse channel name from recording for picon.

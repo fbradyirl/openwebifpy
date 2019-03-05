@@ -323,14 +323,20 @@ class CreateDevice(object):
                 cached_info = self.get_status_info()
             currservice_serviceref = cached_info['currservice_serviceref']
 
-        if not currservice_serviceref.startswith('1:0:0'):
-            # This is not a recording
-            picon_name = self.get_picon_name(channel_name)
-            url = '%s/picon/%s.png' % (self._base, picon_name)
+        if currservice_serviceref.startswith('1:0:0'):
+            # parse from this
+            #     "currservice_serviceref": "1:0:0:0:0:0:0:0:0:0:/media/hdd/movie/20190224 2253 - Virgin Media 1 - Guinness Six Nations Highlights.ts",
+            try:
+                channel_name = currservice_serviceref.split('-')[1].strip()
+            except:
+                log.debug("cannot determine channel name from recording")
 
-            if self.url_exists(url):
-                log.debug('picon url: %s', url)
-                return url
+        picon_name = self.get_picon_name(channel_name)
+        url = '%s/picon/%s.png' % (self._base, picon_name)
+
+        if self.url_exists(url):
+            log.debug('picon url: %s', url)
+            return url
 
         # Last ditch attempt. If channel ends in HD, lets try
         # and get non HD picon
