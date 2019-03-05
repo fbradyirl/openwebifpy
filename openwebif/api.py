@@ -270,6 +270,12 @@ class CreateDevice(object):
         if 'inStandby' in result:
             self._in_standby = result['inStandby'] == 'true'
 
+        sref = result['currservice_serviceref']
+        if self.get_current_playback_type(sref) == PlaybackType.recording:
+            # try get correct channel name
+            channel_name = self.get_channel_name_from_serviceref(sref)
+            result['currservice_station'] = channel_name
+
         return result
 
     def get_current_playback_type(self, currservice_serviceref=None):
@@ -324,12 +330,7 @@ class CreateDevice(object):
             currservice_serviceref = cached_info['currservice_serviceref']
 
         if currservice_serviceref.startswith('1:0:0'):
-            # parse from this
-            #     "currservice_serviceref": "1:0:0:0:0:0:0:0:0:0:/media/hdd/movie/20190224 2253 - Virgin Media 1 - Guinness Six Nations Highlights.ts",
-            try:
-                channel_name = currservice_serviceref.split('-')[1].strip()
-            except:
-                log.debug("cannot determine channel name from recording")
+            channel_name = self.get_channel_name_from_serviceref(currservice_serviceref)
 
         picon_name = self.get_picon_name(channel_name)
         url = '%s/picon/%s.png' % (self._base, picon_name)
@@ -356,6 +357,20 @@ class CreateDevice(object):
 
         log.debug('Could not find picon for: %s', channel_name)
         return None
+
+    def get_channel_name_from_serviceref(self, currservice_serviceref):
+        """
+
+        :param currservice_serviceref:
+        :return:
+        """
+        # parse from this
+        #     "currservice_serviceref": "1:0:0:0:0:0:0:0:0:0:/media/hdd/movie/20190224 2253 - Virgin Media 1 - Guinness Six Nations Highlights.ts",
+        try:
+            return currservice_serviceref.split('-')[1].strip()
+        except:
+            log.debug("cannot determine channel name from recording")
+        return currservice_serviceref
 
     def url_exists(self, url):
         """
