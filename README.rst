@@ -30,7 +30,7 @@ Provides a python interface to interact with a device running OpenWebIf
 Features
 --------
 
-* TODO
+* Basic control of an Enigma2 box running OpenWebif.
 
 Credits
 -------

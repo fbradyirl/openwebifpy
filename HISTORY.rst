@@ -63,3 +63,7 @@ History
 1.1.8 (2019-03-05)
 ------------------
 * Randomise the picon url so image doesnt get cached.
+
+1.1.9 (2019-03-05)
+------------------
+* Docs update
