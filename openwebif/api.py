@@ -323,17 +323,8 @@ class CreateDevice(object):
                 cached_info = self.get_status_info()
             currservice_serviceref = cached_info['currservice_serviceref']
 
-        if currservice_serviceref.startswith('1:0:0'):
-            # This is a recording, not a live channel
-
-            # Todo: parse channel name from currservice_serviceref
-            # and get picon based on that
-
-            # As a fallback, send LCD4Linux image (if available)
-            url = '%s%s' % (self._base, URL_LCD_4_LINUX)
-            log.debug('This is a recording, trying url: %s', url)
-
-        else:
+        if not currservice_serviceref.startswith('1:0:0'):
+            # This is not a recording
             picon_name = self.get_picon_name(channel_name)
             url = '%s/picon/%s.png' % (self._base, picon_name)
 

@@ -31,3 +31,7 @@ History
 1.1.0 (2019-03-04)
 ------------------
 * Return screenshot URL if no picon
+
+1.1.1 (2019-03-05)
+------------------
+* Return screenshot URL if recording playback
