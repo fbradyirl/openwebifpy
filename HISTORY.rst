@@ -59,3 +59,7 @@ History
 1.1.7 (2019-03-05)
 ------------------
 * bug fix
+
+1.1.8 (2019-03-05)
+------------------
+* Randomise the picon url so image doesnt get cached.

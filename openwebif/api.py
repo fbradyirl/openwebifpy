@@ -10,6 +10,7 @@ Licensed under the MIT license.
 
 import logging
 import re
+from random import randint
 import unicodedata
 from xml.etree import ElementTree
 
@@ -31,7 +32,7 @@ URL_EPG_NOW = "/api/epgnow?bRef="
 URL_GET_ALL_SERVICES = "/api/getallservices"
 URL_GET_ALL_BOUQUETS = "/api/bouquets"
 URL_ZAP_TO_SOURCE = "/api/zap?sRef="
-URL_GRAB_720 = "/grab?format=jpg&r=720"
+URL_GRAB_720 = "/grab?format=jpg&r=720&mode=all&T="
 
 # Remote control commands
 URL_REMOTE_CONTROL = "/api/remotecontrol?command="
@@ -363,7 +364,8 @@ class CreateDevice(object):
                 currservice_serviceref)
 
         # Lastly, just return screen grab
-        url = "{}{}".format(self._base, URL_GRAB_720)
+        # random number at the end so image doesnt get cached
+        url = "{}{}{}".format(self._base, URL_GRAB_720, randint(1000000000, 9999999999))
         if self.url_exists(url):
             log.debug('Instead of picon, returning screen grab url: %s', url)
             return url
