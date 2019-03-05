@@ -47,3 +47,7 @@ History
 1.1.4 (2019-03-05)
 ------------------
 * Fix channel name in status info on recording playback
+
+1.1.5 (2019-03-05)
+------------------
+* Adding send stop command

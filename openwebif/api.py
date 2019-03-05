@@ -38,6 +38,7 @@ URL_REMOTE_CONTROL = "/api/remotecontrol?command="
 COMMAND_VU_CHANNEL_UP = "402"
 COMMAND_VU_CHANNEL_DOWN = "403"
 COMMAND_VU_PLAY_PAUSE_TOGGLE = "207"
+COMMAND_VU_STOP = "128"
 
 URL_LCD_4_LINUX = "/lcd4linux/dpf.png"
 
@@ -170,6 +171,17 @@ class CreateDevice(object):
 
         url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
                           COMMAND_VU_CHANNEL_DOWN)
+        log.debug('url: %s', url)
+
+        return self._check_reponse_result(self._session.get(url))
+
+    def set_stop(self):
+        """
+        Send stop command
+        """
+
+        url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
+                          COMMAND_VU_STOP)
         log.debug('url: %s', url)
 
         return self._check_reponse_result(self._session.get(url))
