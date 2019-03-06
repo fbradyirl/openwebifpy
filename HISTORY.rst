@@ -67,3 +67,7 @@ History
 1.1.9 (2019-03-05)
 ------------------
 * Docs update
+
+1.2.0 (2019-03-06)
+------------------
+* adding prefer_picon parameter

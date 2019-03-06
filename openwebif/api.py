@@ -75,7 +75,8 @@ class CreateDevice(object):
     """
 
     def __init__(self, host=None, port=DEFAULT_PORT,
-                 username=None, password=None, is_https=False):
+                 username=None, password=None, is_https=False,
+                 prefer_picon=False):
         enable_logging()
         log.debug("Initialising new openwebif client")
 
@@ -89,6 +90,7 @@ class CreateDevice(object):
         # Used to build a list of URLs which have been tested to exist
         # (for picons)
         self.cached_urls_which_exist = []
+        self.prefer_picon = prefer_picon
 
         # Now build base url
         protocol = 'http' if not is_https else 'https'
@@ -346,22 +348,27 @@ class CreateDevice(object):
         if currservice_serviceref.startswith('1:0:0'):
             channel_name = self.get_channel_name_from_serviceref(currservice_serviceref)
 
-        picon_name = self.get_picon_name(channel_name)
-        url = '%s/picon/%s.png' % (self._base, picon_name)
+        if self.prefer_picon:
 
-        if self.url_exists(url):
-            log.debug('picon url: %s', url)
-            return url
+            picon_name = self.get_picon_name(channel_name)
+            url = '%s/picon/%s.png' % (self._base, picon_name)
 
-        # Last ditch attempt. If channel ends in HD, lets try
-        # and get non HD picon
-        if channel_name.lower().endswith('hd'):
-            channel_name = channel_name[:-2]
-            log.debug('Going to look for non HD picon for: %s',
-                     channel_name)
-            return self.get_current_playing_picon_url(
-                ''.join(channel_name.split()),
-                currservice_serviceref)
+            if self.url_exists(url):
+                log.debug('picon url: %s', url)
+                return url
+
+            # Last ditch attempt. If channel ends in HD, lets try
+            # and get non HD picon
+            if channel_name.lower().endswith('hd'):
+                channel_name = channel_name[:-2]
+                log.debug('Going to look for non HD picon for: %s',
+                         channel_name)
+                return self.get_current_playing_picon_url(
+                    ''.join(channel_name.split()),
+                    currservice_serviceref)
+            log.debug('Could not find picon for: %s', channel_name)
+        else:
+            log.debug('prefer_picon is False. Returing screengrab of channel: %s', channel_name)
 
         # Lastly, just return screen grab
         # random number at the end so image doesnt get cached
@@ -370,7 +377,6 @@ class CreateDevice(object):
             log.debug('Instead of picon, returning screen grab url: %s', url)
             return url
 
-        log.debug('Could not find picon for: %s', channel_name)
         return None
 
     def get_channel_name_from_serviceref(self, currservice_serviceref):
