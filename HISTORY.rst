@@ -71,3 +71,7 @@ History
 1.2.0 (2019-03-06)
 ------------------
 * adding prefer_picon parameter
+
+1.2.1 (2019-03-06)
+------------------
+* Tidy up api class

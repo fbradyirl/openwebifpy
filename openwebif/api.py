@@ -23,7 +23,7 @@ from openwebif.error import OpenWebIfError, MissingParamError
 
 log = logging.getLogger(__name__)
 
-URL_ABOUT = "/web/about"
+URL_ABOUT = "/api/about"
 URL_TOGGLE_VOLUME_MUTE = "/web/vol?set=mute"
 URL_SET_VOLUME = "/api/vol?set=set"
 URL_TOGGLE_STANDBY = "/api/powerstate?newstate=0"
@@ -96,7 +96,6 @@ class CreateDevice(object):
         protocol = 'http' if not is_https else 'https'
         self._base = '{}://{}:{}'.format(protocol, host, port)
 
-        self._in_standby = False
         try:
             log.debug("Going to probe device to test connection")
             version = self.get_version()
@@ -115,6 +114,17 @@ class CreateDevice(object):
             log.debug("First bouquet name is: '%s'", first_bouquet_name)
 
         self.sources = self.get_bouquet_sources()
+        self.state = None
+        self.volume = None
+        self.current_service_channel_name = None
+        self.current_programme_name = None
+        self.current_service_ref = None
+        self.muted = False
+        self.picon_url = None
+        self.status_info = {}
+        self.in_standby = False
+        self.is_recording_playback = False
+        self.sources = []
 
     def set_volume(self, new_volume):
         """
@@ -132,6 +142,12 @@ class CreateDevice(object):
 
         return self._check_reponse_result(self._session.get(url))
 
+    def turn_on(self):
+        self.toggle_standby()
+
+    def turn_off(self):
+        self.toggle_standby()
+
     def toggle_standby(self):
         """
         Returns True if command success, else, False
@@ -141,8 +157,6 @@ class CreateDevice(object):
         log.debug('url: %s', url)
 
         result = self._check_reponse_result(self._session.get(url))
-        # Update standby
-        self.get_status_info()
         return result
 
     def toggle_play_pause(self):
@@ -217,107 +231,59 @@ class CreateDevice(object):
 
         return response.json()['result']
 
-    def is_box_in_standby(self):
+    def update(self):
         """
-        Returns True if box is now in standby, else, False
-        """
-        return self._in_standby
-
-    def get_about(self, element_to_query=None, timeout=None):
-        """
-        Returns ElementTree containing the result of <host>/web/about
-        or if element_to_query is not None, the value of that element
-        """
-
-        url = '%s%s' % (self._base, URL_ABOUT)
-        log.debug('url: %s', url)
-
-        if timeout is not None:
-            response = self._session.get(url, timeout=timeout)
-        else:
-            response = self._session.get(url)
-
-        if response.status_code != 200:
-            log_response_errors(response)
-            raise OpenWebIfError('Connection to OpenWebIf failed.')
-
-        if element_to_query is None:
-            return response.content
-        else:
-            try:
-                tree = ElementTree.fromstring(response.content)
-                result = tree.findall(".//" + element_to_query)
-
-                if len(result) > 0:
-                    log.debug('element_to_query: %s result: %s',
-                             element_to_query, result[0])
-
-                    return result[0].text.strip()
-                else:
-                    log.error(
-                        'There was a problem finding element: %s',
-                        element_to_query)
-
-            except AttributeError as attib_err:
-                log.error(
-                    'There was a problem finding element:'
-                    ' %s AttributeError: %s', element_to_query, attib_err)
-                log.error('Entire response: %s', response.content)
-                return
-        return
-
-    def refresh_status_info(self):
-        """
-        Returns json containing the result of <host>/api/statusinfo
-        """
-        return self.get_status_info()
-
-    def get_status_info(self):
-        """
-        Returns json containing the result of <host>/api/statusinfo
+        Refresh current state based from <host>/api/statusinfo
         """
 
         url = '%s%s' % (self._base, URL_STATUS_INFO)
         log.debug('url: %s', url)
 
-        result = self._call_api(url)
+        self.status_info = self._call_api(url)
 
-        if 'inStandby' in result:
-            self._in_standby = result['inStandby'] == 'true'
+        if 'inStandby' in self.status_info:
+            self.in_standby = self.status_info['inStandby'] == 'true'
 
-        if not self._in_standby:
-            sref = result['currservice_serviceref']
-            if self.get_current_playback_type(sref) == PlaybackType.recording:
+        if not self.in_standby:
+            self.current_service_ref = self.status_info['currservice_serviceref']
+            self.is_recording_playback = self.is_currently_recording_playback()
+
+            pname = self.status_info['currservice_name']
+            if self.is_recording_playback:
                 # try get correct channel name
-                channel_name = self.get_channel_name_from_serviceref(sref)
-                result['currservice_station'] = channel_name
+                channel_name = self.get_channel_name_from_serviceref()
+                self.status_info['currservice_station'] = channel_name
+                self.current_service_channel_name = channel_name
+                self.current_programme_name = "🔴 {}".format(pname)
+            else:
+                self.current_service_channel_name = self.status_info['currservice_station']
+                self.current_programme_name = pname if pname != "N/A" else ""
 
-        return result
+            self.muted = self.status_info['muted']
+            self.volume = self.status_info['volume'] / 100
+            self.picon_url = \
+                self.get_current_playing_picon_url(
+                    channel_name=self.current_service_channel_name,
+                    currservice_serviceref=self.current_service_ref)
 
-    def get_current_playback_type(self, currservice_serviceref=None):
+    def is_currently_recording_playback(self):
+
+        return self.get_current_playback_type == PlaybackType.recording
+
+    def get_current_playback_type(self):
         """
         Get the currservice_serviceref playing media type.
 
-        :param currservice_serviceref: If you already know the
-        currservice_serviceref pass it here, else it will be
-        determined
         :return: PlaybackType.live or PlaybackType.recording
         """
 
-        if currservice_serviceref is None:
+        if self.current_service_ref :
+            if self.current_service_ref .startswith('1:0:0'):
+                # This is a recording, not a live channel
+                return PlaybackType.recording
 
-            if self.is_box_in_standby():
-                return PlaybackType.none
-
-            status_info = self.get_status_info()
-            if 'currservice_serviceref' in status_info:
-                currservice_serviceref = status_info['currservice_serviceref']
-
-        if currservice_serviceref.startswith('1:0:0'):
-            # This is a recording, not a live channel
-            return PlaybackType.recording
-
-        return PlaybackType.live
+            return PlaybackType.live
+        return None
 
     def get_current_playing_picon_url(self, channel_name=None,
                                       currservice_serviceref=None,
@@ -333,7 +299,7 @@ class CreateDevice(object):
         """
         cached_info = None
         if channel_name is None:
-            cached_info = self.get_status_info()
+            cached_info = self.status_info
             if 'currservice_station' in cached_info:
                 channel_name = cached_info['currservice_station']
             else:
@@ -342,7 +308,7 @@ class CreateDevice(object):
 
         if currservice_serviceref is None:
             if cached_info is None:
-                cached_info = self.get_status_info()
+                cached_info = self.status_info
             currservice_serviceref = cached_info['currservice_serviceref']
 
         if currservice_serviceref.startswith('1:0:0'):
@@ -379,7 +345,7 @@ class CreateDevice(object):
 
         return None
 
-    def get_channel_name_from_serviceref(self, currservice_serviceref):
+    def get_channel_name_from_serviceref(self):
         """
 
         :param currservice_serviceref:
@@ -388,10 +354,10 @@ class CreateDevice(object):
         # parse from this
         #     "currservice_serviceref": "1:0:0:0:0:0:0:0:0:0:/media/hdd/movie/20190224 2253 - Virgin Media 1 - Guinness Six Nations Highlights.ts",
         try:
-            return currservice_serviceref.split('-')[1].strip()
+            return self.current_service_ref.split('-')[1].strip()
         except:
             log.debug("cannot determine channel name from recording")
-        return currservice_serviceref
+        return self.current_service_ref
 
     def url_exists(self, url):
         """
@@ -442,8 +408,12 @@ class CreateDevice(object):
         """
         Returns Openwebif version
         """
-        return self.get_about(
-            element_to_query='e2webifversion', timeout=5)
+        url = '{}{}'.format(self._base, URL_ABOUT)
+
+        log.debug('url: %s', url)
+        result = self._call_api(url)
+
+        return result['info']['webifver']
 
     def get_bouquet_sources(self, bouquet=None):
         """
