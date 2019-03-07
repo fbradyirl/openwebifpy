@@ -311,8 +311,8 @@ class CreateDevice(object):
                 cached_info = self.status_info
             currservice_serviceref = cached_info['currservice_serviceref']
 
-        if currservice_serviceref.startswith('1:0:0'):
-            channel_name = self.get_channel_name_from_serviceref(currservice_serviceref)
+        if self.is_recording_playback:
+            channel_name = self.get_channel_name_from_serviceref()
 
         if self.prefer_picon:
 
