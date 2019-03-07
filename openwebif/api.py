@@ -114,6 +114,7 @@ class CreateDevice(object):
             log.debug("First bouquet name is: '%s'", first_bouquet_name)
 
         self.sources = self.get_bouquet_sources()
+        self.source_list = list(self.sources.keys())
         self.state = None
         self.volume = None
         self.current_service_channel_name = None
@@ -124,7 +125,6 @@ class CreateDevice(object):
         self.status_info = {}
         self.in_standby = False
         self.is_recording_playback = False
-        self.sources = []
 
     def set_volume(self, new_volume):
         """
