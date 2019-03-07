@@ -115,6 +115,8 @@ class CreateDevice(object):
 
         self.sources = self.get_bouquet_sources()
         self.source_list = list(self.sources.keys())
+        self.in_standby = True
+
         self.state = None
         self.volume = None
         self.current_service_channel_name = None
@@ -123,7 +125,17 @@ class CreateDevice(object):
         self.muted = False
         self.picon_url = None
         self.status_info = {}
-        self.in_standby = False
+        self.is_recording_playback = False
+
+    def default_all(self):
+        self.state = None
+        self.volume = None
+        self.current_service_channel_name = None
+        self.current_programme_name = None
+        self.current_service_ref = None
+        self.muted = False
+        self.picon_url = None
+        self.status_info = {}
         self.is_recording_playback = False
 
     def set_volume(self, new_volume):
@@ -265,7 +277,9 @@ class CreateDevice(object):
                 self.get_current_playing_picon_url(
                     channel_name=self.current_service_channel_name,
                     currservice_serviceref=self.current_service_ref)
-
+        else:
+            self.default_all()
+            
     def is_currently_recording_playback(self):
         return self.get_current_playback_type() == PlaybackType.recording
 
