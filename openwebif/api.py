@@ -267,8 +267,7 @@ class CreateDevice(object):
                     currservice_serviceref=self.current_service_ref)
 
     def is_currently_recording_playback(self):
-
-        return self.get_current_playback_type == PlaybackType.recording
+        return self.get_current_playback_type() == PlaybackType.recording
 
     def get_current_playback_type(self):
         """
