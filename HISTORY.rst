@@ -95,3 +95,7 @@ History
 1.2.6 (2019-03-06)
 ------------------
 * Default all
+
+1.2.7 (2019-03-08)
+------------------
+* Check in_standby state before going into or out of standby

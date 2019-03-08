@@ -155,10 +155,26 @@ class CreateDevice(object):
         return self._check_reponse_result(self._session.get(url))
 
     def turn_on(self):
-        self.toggle_standby()
+        """
+        Take the box out of standby.
+
+        This first checks if it our in_standby state is true,
+        otherwise the box will actually go into standby. This
+        is down to there only being a "toggle" API available.
+        """
+        if self.in_standby:
+            return self.toggle_standby()
 
     def turn_off(self):
-        self.toggle_standby()
+        """
+        Put the box out into standby.
+
+        This first checks if it our in_standby state is false,
+        otherwise the box will actually come out of standby. This
+        is down to there only being a "toggle" API available.
+        """
+        if not self.in_standby:
+            return self.toggle_standby()
 
     def toggle_standby(self):
         """
