@@ -99,3 +99,9 @@ History
 1.2.7 (2019-03-08)
 ------------------
 * Check in_standby state before going into or out of standby
+
+2.0.0 (2019-03-17)
+------------------
+* Fixing up tox to include pylint
+* Fixes for same
+* Adding zeroconf discovery for e2 boxes.
