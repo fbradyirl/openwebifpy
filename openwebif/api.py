@@ -12,7 +12,6 @@ import logging
 import re
 from random import randint
 import unicodedata
-from xml.etree import ElementTree
 
 from enum import Enum
 import requests
@@ -21,7 +20,7 @@ from requests.exceptions import ConnectionError as ReConnError
 from openwebif.constants import DEFAULT_PORT
 from openwebif.error import OpenWebIfError, MissingParamError
 
-log = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 URL_ABOUT = "/api/about"
 URL_TOGGLE_VOLUME_MUTE = "/web/vol?set=mute"
@@ -51,17 +50,14 @@ class PlaybackType(Enum):
     none = 3
 
 
-# pylint: disable=too-many-arguments
-
-
 def log_response_errors(response):
     """
     Logs problems in a response
     """
 
-    log.error("status_code %s", response.status_code)
+    _LOGGER.error("status_code %s", response.status_code)
     if response.error:
-        log.error("error %s", response.error)
+        _LOGGER.error("error %s", response.error)
 
 
 def enable_logging():
@@ -69,19 +65,22 @@ def enable_logging():
     logging.basicConfig(level=logging.INFO)
 
 
-class CreateDevice(object):
+# pylint: disable=too-many-public-methods
+class CreateDevice():
     """
     Create a new OpenWebIf client device.
     """
 
+    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-arguments
     def __init__(self, host=None, port=DEFAULT_PORT,
                  username=None, password=None, is_https=False,
                  prefer_picon=False):
         enable_logging()
-        log.debug("Initialising new openwebif client")
+        _LOGGER.debug("Initialising new openwebif client")
 
         if not host:
-            log.error('Missing Openwebif host!')
+            _LOGGER.error('Missing Openwebif host!')
             raise MissingParamError('Connection to OpenWebIf failed.', None)
 
         self._session = requests.Session()
@@ -97,10 +96,10 @@ class CreateDevice(object):
         self._base = '{}://{}:{}'.format(protocol, host, port)
 
         try:
-            log.debug("Going to probe device to test connection")
+            _LOGGER.debug("Going to probe device to test connection")
             version = self.get_version()
-            log.debug("Connected OK.")
-            log.debug("OpenWebIf version %s", version)
+            _LOGGER.debug("Connected OK.")
+            _LOGGER.debug("OpenWebIf version %s", version)
 
         except ReConnError as conn_err:
             raise OpenWebIfError('Connection to OpenWebIf failed.', conn_err)
@@ -111,7 +110,7 @@ class CreateDevice(object):
         if 'bouquets' in all_bouquets:
             self._first_bouquet = all_bouquets['bouquets'][0][0]
             first_bouquet_name = all_bouquets['bouquets'][0][1]
-            log.debug("First bouquet name is: '%s'", first_bouquet_name)
+            _LOGGER.debug("First bouquet name is: '%s'", first_bouquet_name)
 
         self.sources = self.get_bouquet_sources()
         self.source_list = list(self.sources.keys())
@@ -128,6 +127,7 @@ class CreateDevice(object):
         self.is_recording_playback = False
 
     def default_all(self):
+        """Default all the props."""
         self.state = None
         self.volume = None
         self.current_service_channel_name = None
@@ -146,11 +146,8 @@ class CreateDevice(object):
         :return: True if successful, false if there was a problem
         """
 
-        assert -1 << new_volume << 101, "Volume must be between " \
-                                        "0 and 100"
-
         url = '%s%s%s' % (self._base, URL_SET_VOLUME, str(new_volume))
-        log.debug('url: %s', url)
+        _LOGGER.debug('url: %s', url)
 
         return self._check_reponse_result(self._session.get(url))
 
@@ -164,6 +161,7 @@ class CreateDevice(object):
         """
         if self.in_standby:
             return self.toggle_standby()
+        return None
 
     def turn_off(self):
         """
@@ -175,6 +173,7 @@ class CreateDevice(object):
         """
         if not self.in_standby:
             return self.toggle_standby()
+        return None
 
     def toggle_standby(self):
         """
@@ -182,7 +181,7 @@ class CreateDevice(object):
         """
 
         url = '%s%s' % (self._base, URL_TOGGLE_STANDBY)
-        log.debug('url: %s', url)
+        _LOGGER.debug('url: %s', url)
 
         result = self._check_reponse_result(self._session.get(url))
         return result
@@ -194,7 +193,7 @@ class CreateDevice(object):
 
         url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
                           COMMAND_VU_PLAY_PAUSE_TOGGLE)
-        log.debug('url: %s', url)
+        _LOGGER.debug('url: %s', url)
 
         return self._check_reponse_result(self._session.get(url))
 
@@ -205,7 +204,7 @@ class CreateDevice(object):
 
         url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
                           COMMAND_VU_CHANNEL_UP)
-        log.debug('url: %s', url)
+        _LOGGER.debug('url: %s', url)
 
         return self._check_reponse_result(self._session.get(url))
 
@@ -216,7 +215,7 @@ class CreateDevice(object):
 
         url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
                           COMMAND_VU_CHANNEL_DOWN)
-        log.debug('url: %s', url)
+        _LOGGER.debug('url: %s', url)
 
         return self._check_reponse_result(self._session.get(url))
 
@@ -227,7 +226,7 @@ class CreateDevice(object):
 
         url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
                           COMMAND_VU_STOP)
-        log.debug('url: %s', url)
+        _LOGGER.debug('url: %s', url)
 
         return self._check_reponse_result(self._session.get(url))
 
@@ -236,7 +235,7 @@ class CreateDevice(object):
         Send mute command
         """
         url = '%s%s' % (self._base, URL_TOGGLE_VOLUME_MUTE)
-        log.debug('url: %s', url)
+        _LOGGER.debug('url: %s', url)
 
         response = self._session.get(url)
         if response.status_code != 200:
@@ -265,7 +264,7 @@ class CreateDevice(object):
         """
 
         url = '%s%s' % (self._base, URL_STATUS_INFO)
-        log.debug('url: %s', url)
+        _LOGGER.debug('url: %s', url)
 
         self.status_info = self._call_api(url)
 
@@ -273,7 +272,8 @@ class CreateDevice(object):
             self.in_standby = self.status_info['inStandby'] == 'true'
 
         if not self.in_standby:
-            self.current_service_ref = self.status_info['currservice_serviceref']
+            self.current_service_ref = self.status_info[
+                'currservice_serviceref']
             self.is_recording_playback = self.is_currently_recording_playback()
 
             pname = self.status_info['currservice_name']
@@ -284,7 +284,8 @@ class CreateDevice(object):
                 self.current_service_channel_name = channel_name
                 self.current_programme_name = "🔴 {}".format(pname)
             else:
-                self.current_service_channel_name = self.status_info['currservice_station']
+                self.current_service_channel_name = self.status_info[
+                    'currservice_station']
                 self.current_programme_name = pname if pname != "N/A" else ""
 
             self.muted = self.status_info['muted']
@@ -297,6 +298,7 @@ class CreateDevice(object):
             self.default_all()
 
     def is_currently_recording_playback(self):
+        """Returns true if playing back recording."""
         return self.get_current_playback_type() == PlaybackType.recording
 
     def get_current_playback_type(self):
@@ -306,8 +308,8 @@ class CreateDevice(object):
         :return: PlaybackType.live or PlaybackType.recording
         """
 
-        if self.current_service_ref :
-            if self.current_service_ref .startswith('1:0:0'):
+        if self.current_service_ref:
+            if self.current_service_ref.startswith('1:0:0'):
                 # This is a recording, not a live channel
                 return PlaybackType.recording
 
@@ -315,15 +317,13 @@ class CreateDevice(object):
         return None
 
     def get_current_playing_picon_url(self, channel_name=None,
-                                      currservice_serviceref=None,
-                                      screengrab_on_fail=True):
+                                      currservice_serviceref=None):
         """
         Return the URL to the picon image for the currently playing channel
 
         :param channel_name: If specified, it will base url on this channel
         name else, fetch latest from get_status_info()
         :param currservice_serviceref: The service_ref for the current service
-        :param screengrab_on_fail: Return screenshot if no picon found
         :return: The URL, or None if not available
         """
         cached_info = None
@@ -332,7 +332,7 @@ class CreateDevice(object):
             if 'currservice_station' in cached_info:
                 channel_name = cached_info['currservice_station']
             else:
-                log.debug('No channel currently playing')
+                _LOGGER.debug('No channel currently playing')
                 return None
 
         if currservice_serviceref is None:
@@ -349,27 +349,30 @@ class CreateDevice(object):
             url = '%s/picon/%s.png' % (self._base, picon_name)
 
             if self.url_exists(url):
-                log.debug('picon url: %s', url)
+                _LOGGER.debug('picon url: %s', url)
                 return url
 
             # Last ditch attempt. If channel ends in HD, lets try
             # and get non HD picon
             if channel_name.lower().endswith('hd'):
                 channel_name = channel_name[:-2]
-                log.debug('Going to look for non HD picon for: %s',
-                         channel_name)
+                _LOGGER.debug('Going to look for non HD picon for: %s',
+                              channel_name)
                 return self.get_current_playing_picon_url(
                     ''.join(channel_name.split()),
                     currservice_serviceref)
-            log.debug('Could not find picon for: %s', channel_name)
+            _LOGGER.debug('Could not find picon for: %s', channel_name)
         else:
-            log.debug('prefer_picon is False. Returing screengrab of channel: %s', channel_name)
+            _LOGGER.debug('prefer_picon is False. Returning '
+                          'screengrab of channel: %s', channel_name)
 
         # Lastly, just return screen grab
         # random number at the end so image doesnt get cached
-        url = "{}{}{}".format(self._base, URL_GRAB_720, randint(1000000000, 9999999999))
+        url = "{}{}{}".format(self._base, URL_GRAB_720,
+                              randint(1000000000, 9999999999))
         if self.url_exists(url):
-            log.debug('Instead of picon, returning screen grab url: %s', url)
+            _LOGGER.debug('Instead of picon, returning '
+                          'screen grab url: %s', url)
             return url
 
         return None
@@ -380,12 +383,11 @@ class CreateDevice(object):
         :param currservice_serviceref:
         :return:
         """
-        # parse from this
-        #     "currservice_serviceref": "1:0:0:0:0:0:0:0:0:0:/media/hdd/movie/20190224 2253 - Virgin Media 1 - Guinness Six Nations Highlights.ts",
         try:
             return self.current_service_ref.split('-')[1].strip()
-        except:
-            log.debug("cannot determine channel name from recording")
+        # pylint: disable=broad-except
+        except Exception:
+            _LOGGER.debug("cannot determine channel name from recording")
         return self.current_service_ref
 
     def url_exists(self, url):
@@ -396,14 +398,14 @@ class CreateDevice(object):
         """
 
         if url in self.cached_urls_which_exist:
-            log.debug('picon url (already tested): %s', url)
+            _LOGGER.debug('picon url (already tested): %s', url)
             return True
 
         request = self._session.head(url)
         if request.status_code == 200:
             self.cached_urls_which_exist.append(url)
-            log.debug('cached_urls_which_exist: %s',
-                      str(self.cached_urls_which_exist))
+            _LOGGER.debug('cached_urls_which_exist: %s',
+                          str(self.cached_urls_which_exist))
             return True
 
         return False
@@ -417,7 +419,7 @@ class CreateDevice(object):
         :param channel_name: The name of the channel
         :return: the correctly formatted name
         """
-        log.debug("Getting Picon URL for : " + channel_name)
+        _LOGGER.debug("Getting Picon URL for %s", channel_name)
 
         channel_name = unicodedata.normalize('NFKD', channel_name) \
             .encode('ASCII', 'ignore')
@@ -439,7 +441,7 @@ class CreateDevice(object):
         """
         url = '{}{}'.format(self._base, URL_ABOUT)
 
-        log.debug('url: %s', url)
+        _LOGGER.debug('url: %s', url)
         result = self._call_api(url)
 
         return result['info']['webifver']
@@ -463,7 +465,7 @@ class CreateDevice(object):
 
         url = '{}{}{}'.format(self._base, URL_EPG_NOW, bouquet)
 
-        log.debug('url: %s', url)
+        _LOGGER.debug('url: %s', url)
         result = self._call_api(url)
 
         events = result['events']
@@ -472,16 +474,16 @@ class CreateDevice(object):
 
         sources = dict(zip(source_names, source_refs))
 
-        log.debug('sources: %s', sources)
+        _LOGGER.debug('sources: %s', sources)
         return sources
 
     def get_all_services(self):
-
+        """Get list of all services."""
         url = '{}{}'.format(self._base, URL_GET_ALL_SERVICES)
         return self._call_api(url)
 
     def get_all_bouquets(self):
-
+        """Get list of all bouquets."""
         url = '{}{}'.format(self._base, URL_GET_ALL_BOUQUETS)
         return self._call_api(url)
 
@@ -497,7 +499,7 @@ class CreateDevice(object):
     def _call_api(self, url):
         """Perform one api request operation."""
 
-        log.debug("_call_api : %s" % url)
+        _LOGGER.debug("_call_api : %s", url)
         response = self._session.get(url)
 
         if response.status_code == 200:
@@ -505,14 +507,13 @@ class CreateDevice(object):
 
         if response.status_code == 401:
             raise Exception("Failed to authenticate "
-                                    "with OpenWebIf "
-                                    "check your "
-                                    "username and password.")
-        elif response.status_code == 404:
+                            "with OpenWebIf "
+                            "check your "
+                            "username and password.")
+        if response.status_code == 404:
             raise Exception("OpenWebIf responded "
-                                           "with a 404 "
-                                           "from %s", url)
+                            "with a 404")
 
-        log.error("Invalid response from "
-                  "OpenWebIf: %s", response)
+        _LOGGER.error("Invalid response from "
+                      "OpenWebIf: %s", response)
         return []
