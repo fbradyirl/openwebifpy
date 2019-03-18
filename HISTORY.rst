@@ -105,3 +105,7 @@ History
 * Fixing up tox to include pylint
 * Fixes for same
 * Adding zeroconf discovery for e2 boxes.
+
+2.0.1 (2019-03-17)
+------------------
+* No change.
