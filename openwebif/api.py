@@ -607,6 +607,7 @@ class CreateDevice():
                 self.is_offline = True
             return None
 
+        self.is_offline = False
         if response.status_code == 200:
             return response.json()
 
