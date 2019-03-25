@@ -41,6 +41,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/fbradyirl/openwebifpy',
-    version='2.0.1',
+    version='3.0.0',
     zip_safe=False,
 )
