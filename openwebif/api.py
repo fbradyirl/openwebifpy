@@ -542,7 +542,8 @@ class CreateDevice():
             if 'bouquets' in all_bouquets:
                 bouquet = all_bouquets['bouquets'][0][0]
                 first_bouquet_name = all_bouquets['bouquets'][0][1]
-                _LOGGER.debug("First bouquet name is: '%s'", first_bouquet_name)
+                _LOGGER.debug("First bouquet name is: '%s'",
+                              first_bouquet_name)
             else:
                 return sources
         else:
@@ -560,7 +561,8 @@ class CreateDevice():
 
             sources = dict(zip(source_names, source_refs))
         else:
-            _LOGGER.warning("No sources could be loaded from specified bouquet.")
+            _LOGGER.warning("No sources could be loaded "
+                            "from specified bouquet.")
 
         _LOGGER.debug('sources: %s', sources)
         return sources
