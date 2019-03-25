@@ -225,8 +225,13 @@ class CreateDevice():
         url = '{}{}{}'.format(self._base, URL_POWERSTATE_BASE, DEEP_STANDBY)
         _LOGGER.debug('url: %s', url)
 
-        result = self._check_reponse_result(self._session.get(url))
-        return result
+        try:
+            self._session.get(url)
+        except Exception as e:
+            # As there is no proper response, an exception
+            # means the box is now gone down
+            return True
+        return False
 
     def toggle_play_pause(self):
         """
