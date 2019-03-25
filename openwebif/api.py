@@ -25,7 +25,21 @@ _LOGGER = logging.getLogger(__name__)
 URL_ABOUT = "/api/about"
 URL_TOGGLE_VOLUME_MUTE = "/web/vol?set=mute"
 URL_SET_VOLUME = "/api/vol?set=set"
-URL_TOGGLE_STANDBY = "/api/powerstate?newstate=0"
+
+# newstate - (optional) number; one of
+# 0: Toggle StandBy
+# 1: DeepStandBy
+# 2: Reboot
+# 3: Restart Enigma
+# 4: Wakeup
+# 5: Standby
+
+URL_POWERSTATE_BASE = "/api/powerstate?newstate="
+TOGGLE_STANDBY = "0"
+DEEP_STANDBY = "1"
+WAKEUP = "4"
+STANDBY = "5"
+
 URL_STATUS_INFO = "/api/statusinfo"
 URL_EPG_NOW = "/api/epgnow?bRef="
 URL_GET_ALL_SERVICES = "/api/getallservices"
@@ -66,6 +80,7 @@ def enable_logging():
 
 
 # pylint: disable=too-many-public-methods
+# pylint: disable=len-as-condition
 class CreateDevice():
     """
     Create a new OpenWebIf client device.
@@ -75,7 +90,20 @@ class CreateDevice():
     # pylint: disable=too-many-arguments
     def __init__(self, host=None, port=DEFAULT_PORT,
                  username=None, password=None, is_https=False,
-                 prefer_picon=False):
+                 prefer_picon=False, mac_address=None,
+                 turn_off_to_deep=False):
+        """
+        Defines an enigma2 device.
+
+        :param host: IP or hostname
+        :param port: OpenWebif port
+        :param username: e2 user
+        :param password: e2 user password
+        :param is_https: use https or not
+        :param prefer_picon: if yes, return picon instead of screen grab
+        :param mac_address: if set, send WOL packet on power on.
+        :param turn_off_to_deep: If True, send to deep standby on turn off
+        """
         enable_logging()
         _LOGGER.debug("Initialising new openwebif client")
 
@@ -90,6 +118,8 @@ class CreateDevice():
         # (for picons)
         self.cached_urls_which_exist = []
         self.prefer_picon = prefer_picon
+        self.mac_address = mac_address
+        self.turn_off_to_deep = turn_off_to_deep
 
         # Now build base url
         protocol = 'http' if not is_https else 'https'
@@ -115,6 +145,7 @@ class CreateDevice():
         self.sources = self.get_bouquet_sources()
         self.source_list = list(self.sources.keys())
         self.in_standby = True
+        self.is_offline = False
 
         self.state = None
         self.volume = None
@@ -154,33 +185,50 @@ class CreateDevice():
     def turn_on(self):
         """
         Take the box out of standby.
-
-        This first checks if it our in_standby state is true,
-        otherwise the box will actually go into standby. This
-        is down to there only being a "toggle" API available.
         """
-        if self.in_standby:
-            return self.toggle_standby()
-        return None
+
+        if self.is_offline:
+            _LOGGER.debug('Box is offline, going to try wake on lan')
+            self.wake_up()
+
+        url = '{}{}{}'.format(self._base, URL_POWERSTATE_BASE, WAKEUP)
+        _LOGGER.debug('Wakeup box from standby. url: %s', url)
+
+        result = self._check_reponse_result(self._session.get(url))
+        return result
+
+    def wake_up(self):
+        """Send WOL packet to the mac."""
+        if self.mac_address:
+            from wakeonlan import send_magic_packet
+            send_magic_packet(self.mac_address)
+            _LOGGER.debug("Sent WOL magic packet to %s", self.mac_address)
+            return True
+
+        _LOGGER.warning("Cannot wake up host as mac_address is not known.")
+        return False
 
     def turn_off(self):
         """
         Put the box out into standby.
 
-        This first checks if it our in_standby state is false,
-        otherwise the box will actually come out of standby. This
-        is down to there only being a "toggle" API available.
+        if turn_off_to_deep is True, go to deep standby.
         """
-        if not self.in_standby:
-            return self.toggle_standby()
-        return None
+        if self.turn_off_to_deep:
+            return self.deep_standby()
 
-    def toggle_standby(self):
+        url = '{}{}{}'.format(self._base, URL_POWERSTATE_BASE, STANDBY)
+        _LOGGER.debug('Going into standby. url: %s', url)
+
+        result = self._check_reponse_result(self._session.get(url))
+        return result
+
+    def deep_standby(self):
         """
-        Returns True if command success, else, False
+        Go into deep standby.
         """
 
-        url = '%s%s' % (self._base, URL_TOGGLE_STANDBY)
+        url = '{}{}{}'.format(self._base, URL_POWERSTATE_BASE, DEEP_STANDBY)
         _LOGGER.debug('url: %s', url)
 
         result = self._check_reponse_result(self._session.get(url))
@@ -268,10 +316,14 @@ class CreateDevice():
 
         self.status_info = self._call_api(url)
 
+        if self.is_offline:
+            self.default_all()
+            return
+
         if 'inStandby' in self.status_info:
             self.in_standby = self.status_info['inStandby'] == 'true'
 
-        if not self.in_standby:
+        if not self.in_standby and not self.is_offline:
             self.current_service_ref = self.status_info[
                 'currservice_serviceref']
             self.is_recording_playback = self.is_currently_recording_playback()
@@ -294,6 +346,9 @@ class CreateDevice():
                 self.get_current_playing_picon_url(
                     channel_name=self.current_service_channel_name,
                     currservice_serviceref=self.current_service_ref)
+
+            if not self.mac_address:
+                self.get_version()
         else:
             self.default_all()
 
@@ -319,7 +374,7 @@ class CreateDevice():
     def get_current_playing_picon_url(self, channel_name=None,
                                       currservice_serviceref=None):
         """
-        Return the URL to the picon image for the currently playing channel
+        Return the URL to the picon image for the currently playing channel.
 
         :param channel_name: If specified, it will base url on this channel
         name else, fetch latest from get_status_info()
@@ -347,12 +402,11 @@ class CreateDevice():
 
             picon_name = self.get_picon_name(channel_name)
             url = '%s/picon/%s.png' % (self._base, picon_name)
-
+            _LOGGER.debug('trying picon url (by channel name): %s', url)
             if self.url_exists(url):
-                _LOGGER.debug('picon url: %s', url)
                 return url
 
-            # Last ditch attempt. If channel ends in HD, lets try
+            # If channel ends in HD, lets try
             # and get non HD picon
             if channel_name.lower().endswith('hd'):
                 channel_name = channel_name[:-2]
@@ -361,6 +415,21 @@ class CreateDevice():
                 return self.get_current_playing_picon_url(
                     ''.join(channel_name.split()),
                     currservice_serviceref)
+
+            # Last ditch attempt.
+            # Now try old way, using service ref name.
+            # See https://github.com/home-assistant/home-assistant/issues/22293
+            #
+            # e.g.
+            # sref: "1:0:19:2887:40F:1:C00000:0:0:0:"
+            # url: http://vusolo2/picon/1_0_19_2887_40F_1_C00000_0_0_0.png)
+            picon_file_name = currservice_serviceref.\
+                strip(":").replace(":", "_")
+            url = '%s/picon/%s.png' % (self._base, picon_file_name)
+            _LOGGER.debug('trying picon url (with sref): %s', url)
+            if self.url_exists(url):
+                return url
+
             _LOGGER.debug('Could not find picon for: %s', channel_name)
         else:
             _LOGGER.debug('prefer_picon is False. Returning '
@@ -408,6 +477,7 @@ class CreateDevice():
                           str(self.cached_urls_which_exist))
             return True
 
+        _LOGGER.debug('url at %s does not exist.', url)
         return False
 
     @staticmethod
@@ -443,6 +513,21 @@ class CreateDevice():
 
         _LOGGER.debug('url: %s', url)
         result = self._call_api(url)
+
+        # Discover the mac, so we can WOL the box
+        # later if needed
+        if not self.mac_address:
+            ifaces = result['info']['ifaces']
+            _LOGGER.debug('ifaces: %s', ifaces)
+
+            for iface in ifaces:
+                # Only if it is an eth interface
+                # (wol doesnt work on wireless)
+                if iface['name'].startswith("eth"):
+                    self.mac_address = iface['mac']
+                    _LOGGER.debug('discovered %s mac_address: %s',
+                                  iface['name'],
+                                  self.mac_address)
 
         return result['info']['webifver']
 
@@ -500,7 +585,17 @@ class CreateDevice():
         """Perform one api request operation."""
 
         _LOGGER.debug("_call_api : %s", url)
-        response = self._session.get(url)
+
+        try:
+            response = self._session.get(url)
+        except requests.exceptions.Timeout:
+            # If box is in deep standby, dont raise this
+            # over and over.
+            if not self.is_offline:
+                message = "{} is unreachable.".format(url)
+                _LOGGER.warning(message)
+                self.is_offline = True
+            return None
 
         if response.status_code == 200:
             return response.json()
@@ -511,9 +606,11 @@ class CreateDevice():
                             "check your "
                             "username and password.")
         if response.status_code == 404:
-            raise Exception("OpenWebIf responded "
-                            "with a 404")
+            message = "Got a 404 from {}. Do" \
+                      "you have the OpenWebIf plugin" \
+                      "installed?".format(url)
+            raise Exception(message)
 
         _LOGGER.error("Invalid response from "
                       "OpenWebIf: %s", response)
-        return []
+        return None

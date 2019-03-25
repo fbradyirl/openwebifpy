@@ -109,3 +109,8 @@ History
 2.0.1 (2019-03-17)
 ------------------
 * No change.
+
+3.0.0 (2019-03-24)
+------------------
+* Adding deep standby feature.
+* If in deep standby, dont throw exceptions on every update()

@@ -25,7 +25,7 @@ Provides a python interface to interact with a device running OpenWebIf
 
 * Free software: MIT license
 * Documentation: https://openwebifpy.readthedocs.io.
-
+* OpenWebif API docs: https://github.com/E2OpenPlugins/e2openplugin-OpenWebif/wiki/OpenWebif-API-documentation
 
 Features
 --------
