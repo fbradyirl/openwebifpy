@@ -126,3 +126,7 @@ History
 3.0.3 (2019-03-24)
 ------------------
 * Catch connection error on deep standby
+
+3.0.4 (2019-03-24)
+------------------
+* Unpin all reqs
