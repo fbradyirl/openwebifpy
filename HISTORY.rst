@@ -150,3 +150,7 @@ History
 3.0.9 (2019-03-24)
 ------------------
 * Remove I/O from init
+
+3.1.0 (2019-03-24)
+------------------
+* Add back get_version to init

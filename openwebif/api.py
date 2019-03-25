@@ -141,6 +141,7 @@ class CreateDevice():
         self.source_bouquet = source_bouquet
         self.sources = None
         self.source_list = None
+        self.get_version()
 
     def default_all(self):
         """Default all the props."""
