@@ -593,7 +593,7 @@ class CreateDevice():
 
         try:
             response = self._session.get(url)
-        except requests.exceptions.Timeout:
+        except requests.exceptions.ConnectionError:
             # If box is in deep standby, dont raise this
             # over and over.
             if not self.is_offline:

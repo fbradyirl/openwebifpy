@@ -122,3 +122,7 @@ History
 3.0.2 (2019-03-24)
 ------------------
 * Fix tox
+
+3.0.3 (2019-03-24)
+------------------
+* Catch connection error on deep standby
