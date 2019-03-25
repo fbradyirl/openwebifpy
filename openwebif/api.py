@@ -126,15 +126,6 @@ class CreateDevice():
         protocol = 'http' if not is_https else 'https'
         self._base = '{}://{}:{}'.format(protocol, host, port)
 
-        try:
-            _LOGGER.debug("Going to probe device to test connection")
-            version = self.get_version()
-            _LOGGER.debug("Connected OK.")
-            _LOGGER.debug("OpenWebIf version %s", version)
-
-        except ReConnError as conn_err:
-            raise OpenWebIfError('Connection to OpenWebIf failed.', conn_err)
-
         self.sources = self.get_bouquet_sources(bouquet=source_bouquet)
         self.source_list = list(self.sources.keys())
         self.in_standby = True
@@ -149,6 +140,15 @@ class CreateDevice():
         self.picon_url = None
         self.status_info = {}
         self.is_recording_playback = False
+
+        try:
+            _LOGGER.debug("Going to probe device to test connection")
+            version = self.get_version()
+            _LOGGER.debug("Connected OK.")
+            _LOGGER.debug("OpenWebIf version %s", version)
+
+        except ReConnError as conn_err:
+            raise OpenWebIfError('Connection to OpenWebIf failed.', conn_err)
 
     def default_all(self):
         """Default all the props."""
