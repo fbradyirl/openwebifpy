@@ -91,7 +91,7 @@ class CreateDevice():
     def __init__(self, host=None, port=DEFAULT_PORT,
                  username=None, password=None, is_https=False,
                  prefer_picon=False, mac_address=None,
-                 turn_off_to_deep=False):
+                 turn_off_to_deep=False, source_bouquet=None):
         """
         Defines an enigma2 device.
 
@@ -103,6 +103,7 @@ class CreateDevice():
         :param prefer_picon: if yes, return picon instead of screen grab
         :param mac_address: if set, send WOL packet on power on.
         :param turn_off_to_deep: If True, send to deep standby on turn off
+        :param source_bouquet: Which bouquet ref you want to load
         """
         enable_logging()
         _LOGGER.debug("Initialising new openwebif client")
@@ -134,15 +135,7 @@ class CreateDevice():
         except ReConnError as conn_err:
             raise OpenWebIfError('Connection to OpenWebIf failed.', conn_err)
 
-        # load first bouquet
-        all_bouquets = self.get_all_bouquets()
-        self._first_bouquet = None
-        if 'bouquets' in all_bouquets:
-            self._first_bouquet = all_bouquets['bouquets'][0][0]
-            first_bouquet_name = all_bouquets['bouquets'][0][1]
-            _LOGGER.debug("First bouquet name is: '%s'", first_bouquet_name)
-
-        self.sources = self.get_bouquet_sources()
+        self.sources = self.get_bouquet_sources(bouquet=source_bouquet)
         self.source_list = list(self.sources.keys())
         self.in_standby = True
         self.is_offline = False
@@ -161,6 +154,7 @@ class CreateDevice():
         """Default all the props."""
         self.state = None
         self.volume = None
+        self.in_standby = True
         self.current_service_channel_name = None
         self.current_programme_name = None
         self.current_service_ref = None
@@ -316,7 +310,7 @@ class CreateDevice():
 
         self.status_info = self._call_api(url)
 
-        if self.is_offline:
+        if self.is_offline or not self.status_info:
             self.default_all()
             return
 
@@ -543,21 +537,30 @@ class CreateDevice():
         sources = {}
 
         if not bouquet:
-            if self._first_bouquet:
-                bouquet = self._first_bouquet
+            # load first bouquet
+            all_bouquets = self.get_all_bouquets()
+            if 'bouquets' in all_bouquets:
+                bouquet = all_bouquets['bouquets'][0][0]
+                first_bouquet_name = all_bouquets['bouquets'][0][1]
+                _LOGGER.debug("First bouquet name is: '%s'", first_bouquet_name)
             else:
                 return sources
+        else:
+            _LOGGER.info('User defined bouquet to load: %s', bouquet)
 
         url = '{}{}{}'.format(self._base, URL_EPG_NOW, bouquet)
 
-        _LOGGER.debug('url: %s', url)
+        _LOGGER.debug('loading sources from bouquet. url: %s', url)
         result = self._call_api(url)
 
-        events = result['events']
-        source_names = [src['sname'] for src in events]
-        source_refs = [src['sref'] for src in events]
+        if result:
+            events = result['events']
+            source_names = [src['sname'] for src in events]
+            source_refs = [src['sref'] for src in events]
 
-        sources = dict(zip(source_names, source_refs))
+            sources = dict(zip(source_names, source_refs))
+        else:
+            _LOGGER.warning("No sources could be loaded from specified bouquet.")
 
         _LOGGER.debug('sources: %s', sources)
         return sources

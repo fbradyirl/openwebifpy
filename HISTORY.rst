@@ -114,3 +114,7 @@ History
 ------------------
 * Adding deep standby feature.
 * If in deep standby, dont throw exceptions on every update()
+
+3.0.1 (2019-03-24)
+------------------
+* Allow pass in source_bouquet
