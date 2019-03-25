@@ -142,3 +142,7 @@ History
 3.0.7 (2019-03-24)
 ------------------
 * Fix offline reset
+
+3.0.8 (2019-03-24)
+------------------
+* Handle getversion on host down

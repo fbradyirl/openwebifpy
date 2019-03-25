@@ -126,8 +126,6 @@ class CreateDevice():
         protocol = 'http' if not is_https else 'https'
         self._base = '{}://{}:{}'.format(protocol, host, port)
 
-        self.sources = self.get_bouquet_sources(bouquet=source_bouquet)
-        self.source_list = list(self.sources.keys())
         self.in_standby = True
         self.is_offline = False
 
@@ -141,14 +139,9 @@ class CreateDevice():
         self.status_info = {}
         self.is_recording_playback = False
 
-        try:
-            _LOGGER.debug("Going to probe device to test connection")
-            version = self.get_version()
-            _LOGGER.debug("Connected OK.")
-            _LOGGER.debug("OpenWebIf version %s", version)
-
-        except ReConnError as conn_err:
-            raise OpenWebIfError('Connection to OpenWebIf failed.', conn_err)
+        self.sources = self.get_bouquet_sources(bouquet=source_bouquet)
+        self.source_list = list(self.sources.keys())
+        self.get_version()
 
     def default_all(self):
         """Default all the props."""
@@ -227,7 +220,8 @@ class CreateDevice():
 
         try:
             self._session.get(url)
-        except Exception as e:
+        # pylint: disable=broad-except
+        except Exception:
             # As there is no proper response, an exception
             # means the box is now gone down
             return True
@@ -513,6 +507,13 @@ class CreateDevice():
         _LOGGER.debug('url: %s', url)
         result = self._call_api(url)
 
+        if self.is_offline:
+            _LOGGER.warning("Cannot get version as box is unreachable.")
+            return ''
+
+        _LOGGER.debug("Connected OK.")
+        version = result['info']['webifver']
+        _LOGGER.debug("OpenWebIf version %s", version)
         # Discover the mac, so we can WOL the box
         # later if needed
         if not self.mac_address:
@@ -528,7 +529,7 @@ class CreateDevice():
                                   iface['name'],
                                   self.mac_address)
 
-        return result['info']['webifver']
+        return version
 
     def get_bouquet_sources(self, bouquet=None):
         """
@@ -598,7 +599,7 @@ class CreateDevice():
 
         try:
             response = self._session.get(url)
-        except requests.exceptions.ConnectionError:
+        except ReConnError:
             # If box is in deep standby, dont raise this
             # over and over.
             if not self.is_offline:
