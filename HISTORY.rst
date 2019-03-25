@@ -146,3 +146,7 @@ History
 3.0.8 (2019-03-24)
 ------------------
 * Handle getversion on host down
+
+3.0.9 (2019-03-24)
+------------------
+* Remove I/O from init

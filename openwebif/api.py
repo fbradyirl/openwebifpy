@@ -138,10 +138,9 @@ class CreateDevice():
         self.picon_url = None
         self.status_info = {}
         self.is_recording_playback = False
-
-        self.sources = self.get_bouquet_sources(bouquet=source_bouquet)
-        self.source_list = list(self.sources.keys())
-        self.get_version()
+        self.source_bouquet = source_bouquet
+        self.sources = None
+        self.source_list = None
 
     def default_all(self):
         """Default all the props."""
@@ -342,6 +341,10 @@ class CreateDevice():
 
             if not self.mac_address:
                 self.get_version()
+            if not self.sources:
+                self.sources = self.get_bouquet_sources(
+                    bouquet=self.source_bouquet)
+                self.source_list = list(self.sources.keys())
         else:
             self.default_all()
 
