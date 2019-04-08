@@ -154,3 +154,7 @@ History
 3.1.0 (2019-03-24)
 ------------------
 * Add back get_version to init
+
+3.1.1 (2019-04-08)
+------------------
+* Handle bad connection to fetch bouquets

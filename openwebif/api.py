@@ -511,7 +511,7 @@ class CreateDevice():
         _LOGGER.debug('url: %s', url)
         result = self._call_api(url)
 
-        if self.is_offline:
+        if self.is_offline or not result:
             _LOGGER.warning("Cannot get version as box is unreachable.")
             return ''
 
@@ -549,12 +549,17 @@ class CreateDevice():
         if not bouquet:
             # load first bouquet
             all_bouquets = self.get_all_bouquets()
+            if not all_bouquets:
+                _LOGGER.debug("get_all_bouquets: No bouquets were found.")
+                return sources
+
             if 'bouquets' in all_bouquets:
                 bouquet = all_bouquets['bouquets'][0][0]
                 first_bouquet_name = all_bouquets['bouquets'][0][1]
                 _LOGGER.debug("First bouquet name is: '%s'",
                               first_bouquet_name)
             else:
+                _LOGGER.debug("bouquets not in all_bouquets.")
                 return sources
         else:
             _LOGGER.info('User defined bouquet to load: %s', bouquet)
