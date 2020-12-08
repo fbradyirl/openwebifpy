@@ -120,6 +120,7 @@ def stop_discovery(browser):
     browser.zc.close()
 
 
+# pylint: disable=import-outside-toplevel
 def discover_enigma2s(max_devices=None, timeout=DISCOVER_TIMEOUT):
     """ Discover enigma2s on the network. """
     from threading import Event

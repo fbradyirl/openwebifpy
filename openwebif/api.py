@@ -77,9 +77,8 @@ def enable_logging():
     logging.basicConfig(level=logging.INFO)
 
 
-# pylint: disable=too-many-public-methods
-# pylint: disable=len-as-condition
-class CreateDevice():
+# pylint: skip-file
+class CreateDevice:
     """
     Create a new OpenWebIf client device.
     """
@@ -91,8 +90,7 @@ class CreateDevice():
 
         return session
 
-    # pylint: disable=too-many-instance-attributes
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, disable=too-many-instance-attributes
     def __init__(self, host=None, port=None,
                  username=None, password=None, is_https=False,
                  prefer_picon=False, mac_address=None,
@@ -192,6 +190,7 @@ class CreateDevice():
         result = self._check_reponse_result(self._get_session().get(url))
         return result
 
+    # pylint: disable=import-outside-toplevel
     def wake_up(self):
         """Send WOL packet to the mac."""
         if self.mac_address:
@@ -327,8 +326,8 @@ class CreateDevice():
         if 'inStandby' in self.status_info:
             self.in_standby = self.status_info['inStandby'] == 'true'
 
-        if not self.in_standby and not self.is_offline and 'currservice_serviceref' in self.status_info:
-            self.current_service_ref = self.status_info['currservice_serviceref']
+        if not self.in_standby and not self.is_offline and 'currservice_serviceref' in self.status_info:  # noqa: E501
+            self.current_service_ref = self.status_info['currservice_serviceref']  # noqa: E501
             self.is_recording_playback = self.is_currently_recording_playback()
 
             pname = self.status_info['currservice_name']
@@ -598,7 +597,7 @@ class CreateDevice():
         :param source: the sRef of the channel.
         """
         sref_url_encoded = urllib.parse.quote_plus(source)
-        return self._call_api(f"{self._base}{URL_ZAP_TO_SOURCE}{sref_url_encoded}")
+        return self._call_api(f"{self._base}{URL_ZAP_TO_SOURCE}{sref_url_encoded}")  # noqa: E501
 
     def _call_api(self, url):
         """Perform one api request operation."""
