@@ -6,8 +6,8 @@ openwebifpy
 .. image:: https://img.shields.io/pypi/v/openwebifpy.svg
         :target: https://pypi.python.org/pypi/openwebifpy
 
-.. image:: https://img.shields.io/travis/fbradyirl/openwebifpy.svg
-        :target: https://travis-ci.org/fbradyirl/openwebifpy
+.. image:: https://github.com/fbradyirl/openwebifpy/workflows/.github/workflows/main.yml/badge.svg
+        :target: https://github.com/fbradyirl/openwebifpy/actions
 
 .. image:: https://readthedocs.org/projects/openwebifpy/badge/?version=latest
         :target: https://openwebifpy.readthedocs.io/en/latest/?badge=latest

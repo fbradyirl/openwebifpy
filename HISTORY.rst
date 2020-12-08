@@ -158,3 +158,7 @@ History
 3.1.1 (2019-04-08)
 ------------------
 * Handle bad connection to fetch bouquets
+
+3.1.2 (2020-12-08)
+------------------
+* Switch pipeline to Github actions
