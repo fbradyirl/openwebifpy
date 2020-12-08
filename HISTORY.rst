@@ -162,3 +162,7 @@ History
 3.1.2 (2020-12-08)
 ------------------
 * Switch pipeline to Github actions
+
+3.1.3 (2020-12-08)
+------------------
+* Fix selecting channel source. Works for IPTV channels now also.

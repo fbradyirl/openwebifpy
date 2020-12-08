@@ -12,12 +12,10 @@ import logging
 import re
 from random import randint
 import unicodedata
+import urllib
 
 from enum import Enum
 import requests
-from requests.exceptions import ConnectionError as ReConnError
-
-from openwebif.constants import DEFAULT_PORT
 from openwebif.error import OpenWebIfError, MissingParamError
 
 _LOGGER = logging.getLogger(__name__)
@@ -86,9 +84,16 @@ class CreateDevice():
     Create a new OpenWebIf client device.
     """
 
+    def _get_session(self):
+        session = requests.Session()
+        if self.username is not None and self.password is not None:
+            session.auth = (self.username, self.password)
+
+        return session
+
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-arguments
-    def __init__(self, host=None, port=DEFAULT_PORT,
+    def __init__(self, host=None, port=None,
                  username=None, password=None, is_https=False,
                  prefer_picon=False, mac_address=None,
                  turn_off_to_deep=False, source_bouquet=None):
@@ -112,9 +117,8 @@ class CreateDevice():
             _LOGGER.error('Missing Openwebif host!')
             raise MissingParamError('Connection to OpenWebIf failed.', None)
 
-        self._session = requests.Session()
-        self._session.auth = (username, password)
-
+        self.username = username
+        self.password = password
         # Used to build a list of URLs which have been tested to exist
         # (for picons)
         self.cached_urls_which_exist = []
@@ -124,7 +128,11 @@ class CreateDevice():
 
         # Now build base url
         protocol = 'http' if not is_https else 'https'
-        self._base = '{}://{}:{}'.format(protocol, host, port)
+
+        if port is not None:
+            self._base = f"{protocol}://{host}:{port}"
+        else:
+            self._base = f"{protocol}://{host}"
 
         self.in_standby = True
         self.is_offline = False
@@ -167,7 +175,7 @@ class CreateDevice():
         url = '%s%s%s' % (self._base, URL_SET_VOLUME, str(new_volume))
         _LOGGER.debug('url: %s', url)
 
-        return self._check_reponse_result(self._session.get(url))
+        return self._check_reponse_result(self._get_session().get(url))
 
     def turn_on(self):
         """
@@ -181,7 +189,7 @@ class CreateDevice():
         url = '{}{}{}'.format(self._base, URL_POWERSTATE_BASE, WAKEUP)
         _LOGGER.debug('Wakeup box from standby. url: %s', url)
 
-        result = self._check_reponse_result(self._session.get(url))
+        result = self._check_reponse_result(self._get_session().get(url))
         return result
 
     def wake_up(self):
@@ -207,7 +215,7 @@ class CreateDevice():
         url = '{}{}{}'.format(self._base, URL_POWERSTATE_BASE, STANDBY)
         _LOGGER.debug('Going into standby. url: %s', url)
 
-        result = self._check_reponse_result(self._session.get(url))
+        result = self._check_reponse_result(self._get_session().get(url))
         return result
 
     def deep_standby(self):
@@ -219,7 +227,7 @@ class CreateDevice():
         _LOGGER.debug('url: %s', url)
 
         try:
-            self._session.get(url)
+            self._get_session().get(url)
         # pylint: disable=broad-except
         except Exception:
             # As there is no proper response, an exception
@@ -236,7 +244,7 @@ class CreateDevice():
                           COMMAND_VU_PLAY_PAUSE_TOGGLE)
         _LOGGER.debug('url: %s', url)
 
-        return self._check_reponse_result(self._session.get(url))
+        return self._check_reponse_result(self._get_session().get(url))
 
     def set_channel_up(self):
         """
@@ -247,7 +255,7 @@ class CreateDevice():
                           COMMAND_VU_CHANNEL_UP)
         _LOGGER.debug('url: %s', url)
 
-        return self._check_reponse_result(self._session.get(url))
+        return self._check_reponse_result(self._get_session().get(url))
 
     def set_channel_down(self):
         """
@@ -258,7 +266,7 @@ class CreateDevice():
                           COMMAND_VU_CHANNEL_DOWN)
         _LOGGER.debug('url: %s', url)
 
-        return self._check_reponse_result(self._session.get(url))
+        return self._check_reponse_result(self._get_session().get(url))
 
     def set_stop(self):
         """
@@ -269,7 +277,7 @@ class CreateDevice():
                           COMMAND_VU_STOP)
         _LOGGER.debug('url: %s', url)
 
-        return self._check_reponse_result(self._session.get(url))
+        return self._check_reponse_result(self._get_session().get(url))
 
     def mute_volume(self):
         """
@@ -278,7 +286,7 @@ class CreateDevice():
         url = '%s%s' % (self._base, URL_TOGGLE_VOLUME_MUTE)
         _LOGGER.debug('url: %s', url)
 
-        response = self._session.get(url)
+        response = self._get_session().get(url)
         if response.status_code != 200:
             return False
 
@@ -303,11 +311,14 @@ class CreateDevice():
         """
         Refresh current state based from <host>/api/statusinfo
         """
+        self.status_info = self._call_api(f"{self._base}{URL_STATUS_INFO}")
 
-        url = '%s%s' % (self._base, URL_STATUS_INFO)
-        _LOGGER.debug('url: %s', url)
-
-        self.status_info = self._call_api(url)
+        if not self.mac_address:
+            self.get_version()
+        if not self.sources:
+            self.sources = self.get_bouquet_sources(
+                bouquet=self.source_bouquet)
+            self.source_list = list(self.sources.keys())
 
         if self.is_offline or not self.status_info:
             self.default_all()
@@ -316,9 +327,8 @@ class CreateDevice():
         if 'inStandby' in self.status_info:
             self.in_standby = self.status_info['inStandby'] == 'true'
 
-        if not self.in_standby and not self.is_offline:
-            self.current_service_ref = self.status_info[
-                'currservice_serviceref']
+        if not self.in_standby and not self.is_offline and 'currservice_serviceref' in self.status_info:
+            self.current_service_ref = self.status_info['currservice_serviceref']
             self.is_recording_playback = self.is_currently_recording_playback()
 
             pname = self.status_info['currservice_name']
@@ -339,13 +349,6 @@ class CreateDevice():
                 self.get_current_playing_picon_url(
                     channel_name=self.current_service_channel_name,
                     currservice_serviceref=self.current_service_ref)
-
-            if not self.mac_address:
-                self.get_version()
-            if not self.sources:
-                self.sources = self.get_bouquet_sources(
-                    bouquet=self.source_bouquet)
-                self.source_list = list(self.sources.keys())
         else:
             self.default_all()
 
@@ -467,7 +470,7 @@ class CreateDevice():
             _LOGGER.debug('picon url (already tested): %s', url)
             return True
 
-        request = self._session.head(url)
+        request = self._get_session().head(url)
         if request.status_code == 200:
             self.cached_urls_which_exist.append(url)
             _LOGGER.debug('cached_urls_which_exist: %s',
@@ -506,8 +509,7 @@ class CreateDevice():
         """
         Returns Openwebif version
         """
-        url = '{}{}'.format(self._base, URL_ABOUT)
-
+        url = f"{self._base}{URL_ABOUT}"
         _LOGGER.debug('url: %s', url)
         result = self._call_api(url)
 
@@ -564,8 +566,7 @@ class CreateDevice():
         else:
             _LOGGER.info('User defined bouquet to load: %s', bouquet)
 
-        url = '{}{}{}'.format(self._base, URL_EPG_NOW, bouquet)
-
+        url = f"{self._base}{URL_EPG_NOW}{bouquet}"
         _LOGGER.debug('loading sources from bouquet. url: %s', url)
         result = self._call_api(url)
 
@@ -584,31 +585,32 @@ class CreateDevice():
 
     def get_all_services(self):
         """Get list of all services."""
-        url = '{}{}'.format(self._base, URL_GET_ALL_SERVICES)
-        return self._call_api(url)
+        return self._call_api(f"{self._base}{URL_GET_ALL_SERVICES}")
 
     def get_all_bouquets(self):
         """Get list of all bouquets."""
-        url = '{}{}'.format(self._base, URL_GET_ALL_BOUQUETS)
-        return self._call_api(url)
+        return self._call_api(f"{self._base}{URL_GET_ALL_BOUQUETS}")
 
     def select_source(self, source):
         """
         Change channel to selected source
 
-        :param source:
+        :param source: the sRef of the channel.
         """
-        url = '{}{}{}'.format(self._base, URL_ZAP_TO_SOURCE, source)
-        return self._call_api(url)
+        sref_url_encoded = urllib.parse.quote_plus(source)
+        return self._call_api(f"{self._base}{URL_ZAP_TO_SOURCE}{sref_url_encoded}")
 
     def _call_api(self, url):
         """Perform one api request operation."""
 
         _LOGGER.debug("_call_api : %s", url)
+        response = self._get_session().get(url)
 
-        try:
-            response = self._session.get(url)
-        except ReConnError:
+        if response.status_code not in [200]:
+            error_msg = "Got {} from {}: {}".format(
+                response.status_code, url, response.text)
+            _LOGGER.error(error_msg)
+
             # If box is in deep standby, dont raise this
             # over and over.
             if not self.is_offline:
