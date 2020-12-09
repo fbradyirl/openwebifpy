@@ -430,9 +430,13 @@ class CreateDevice:
                 return url
 
             _LOGGER.debug('Could not find picon for: %s', channel_name)
-        else:
-            _LOGGER.debug('prefer_picon is False. Returning '
-                          'screengrab of channel: %s', channel_name)
+
+            # stop here. Some boxes freeze when attempting screen grabs so often.
+            # See https://github.com/fbradyirl/openwebifpy/issues/14
+            return None
+
+        _LOGGER.debug('prefer_picon is False. Returning '
+                      'screengrab of channel: %s', channel_name)
 
         # Lastly, just return screen grab
         # random number at the end so image doesnt get cached
