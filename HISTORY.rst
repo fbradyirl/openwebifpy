@@ -166,3 +166,7 @@ History
 3.1.3 (2020-12-08)
 ------------------
 * Fix selecting channel source. Works for IPTV channels now also.
+
+3.1.4 (2020-12-09)
+------------------
+* Fix for issues/14
