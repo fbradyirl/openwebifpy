@@ -6,7 +6,7 @@ openwebifpy
 .. image:: https://img.shields.io/pypi/v/openwebifpy.svg
         :target: https://pypi.python.org/pypi/openwebifpy
 
-.. image:: https://github.com/fbradyirl/openwebifpy/workflows/.github/workflows/main.yml/badge.svg
+.. image:: https://github.com/fbradyirl/openwebifpy/workflows/Python%20package/badge.svg
         :target: https://github.com/fbradyirl/openwebifpy/actions
 
 .. image:: https://readthedocs.org/projects/openwebifpy/badge/?version=latest
