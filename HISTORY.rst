@@ -167,6 +167,6 @@ History
 ------------------
 * Fix selecting channel source. Works for IPTV channels now also.
 
-3.1.4 (2020-12-09)
+3.1.5 (2020-12-09)
 ------------------
 * Fix for issues/14
