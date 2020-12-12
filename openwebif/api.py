@@ -23,6 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 URL_ABOUT = "/api/about"
 URL_TOGGLE_VOLUME_MUTE = "/web/vol?set=mute"
 URL_SET_VOLUME = "/api/vol?set=set"
+URL_MESSAGE = "/api/message?timeout={}&type={}&text={}"
 
 # newstate - (optional) number; one of
 # 0: Toggle StandBy
@@ -62,6 +63,14 @@ class PlaybackType(Enum):
     none = 3
 
 
+class MessageType(Enum):
+    """ Enum for Message Type """
+    YESNO = "0"
+    INFO = "1"
+    WARNING = "2"
+    ERROR = "3"
+
+
 def log_response_errors(response):
     """
     Logs problems in a response
@@ -94,7 +103,8 @@ class CreateDevice:
     def __init__(self, host=None, port=None,
                  username=None, password=None, is_https=False,
                  prefer_picon=False, mac_address=None,
-                 turn_off_to_deep=False, source_bouquet=None):
+                 turn_off_to_deep=False, source_bouquet=None,
+                 message_display_timeout=None):
         """
         Defines an enigma2 device.
 
@@ -107,6 +117,7 @@ class CreateDevice:
         :param mac_address: if set, send WOL packet on power on.
         :param turn_off_to_deep: If True, send to deep standby on turn off
         :param source_bouquet: Which bouquet ref you want to load
+        :param message_display_timeout: The display timeout for the notification
         """
         enable_logging()
         _LOGGER.debug("Initialising new openwebif client")
@@ -147,6 +158,7 @@ class CreateDevice:
         self.source_bouquet = source_bouquet
         self.sources = None
         self.source_list = None
+        self.message_display_timeout = message_display_timeout
         self.get_version()
 
     def default_all(self):
@@ -161,6 +173,22 @@ class CreateDevice:
         self.picon_url = None
         self.status_info = {}
         self.is_recording_playback = False
+
+    def send_message(self, text: str, message_type: MessageType = MessageType.INFO):
+        """
+        Sends a message to the TV screen.
+
+        :param text: The message to display
+        :param message_type: The type of message (0 = YES/NO, 1 = INFO, 2 = WARNING, 3 = ERROR)
+        :return: True if successful, false if there was a problem
+        """
+
+        url = self._base + \
+            URL_MESSAGE.format(
+                str(self.message_display_timeout or -1), message_type.value, requests.utils.quote(text))
+        _LOGGER.debug('url: %s', url)
+
+        return self._check_reponse_result(self._session.get(url))
 
     def set_volume(self, new_volume):
         """
