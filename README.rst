@@ -31,6 +31,7 @@ Features
 --------
 
 * Basic control of an Enigma2 box running OpenWebif.
+* Ability to send messages to the screen.
 
 Credits
 -------
