@@ -577,22 +577,22 @@ class CreateDevice:
             # load first bouquet
             all_bouquets = self.get_all_bouquets()
             if not all_bouquets:
-                _LOGGER.debug("get_all_bouquets: No bouquets were found.")
+                _LOGGER.debug(f"{self._base} get_all_bouquets: No bouquets were found.")
                 return sources
 
             if 'bouquets' in all_bouquets:
                 bouquet = all_bouquets['bouquets'][0][0]
                 first_bouquet_name = all_bouquets['bouquets'][0][1]
-                _LOGGER.debug("First bouquet name is: '%s'",
+                _LOGGER.debug(f"{self._base} First bouquet name is: '%s'",
                               first_bouquet_name)
             else:
                 _LOGGER.debug("bouquets not in all_bouquets.")
                 return sources
         else:
-            _LOGGER.info('User defined bouquet to load: %s', bouquet)
+            _LOGGER.info(f"{self._base} User defined bouquet to load: {bouquet}")
 
         url = f"{self._base}{URL_EPG_NOW}{bouquet}"
-        _LOGGER.debug('loading sources from bouquet. url: %s', url)
+        _LOGGER.debug(f"{self._base} loading sources from bouquet. {url}")
         result = self._call_api(url)
 
         if result:
@@ -605,7 +605,7 @@ class CreateDevice:
             _LOGGER.warning("No sources could be loaded "
                             "from specified bouquet.")
 
-        _LOGGER.debug('sources: %s', sources)
+        _LOGGER.debug(f"{self._base} sources: {sources}")
         return sources
 
     def get_all_services(self):
@@ -628,7 +628,7 @@ class CreateDevice:
     def _call_api(self, url):
         """Perform one api request operation."""
 
-        _LOGGER.debug("_call_api : %s", url)
+        _LOGGER.debug("Calling : %s", url)
         try:
             response = self.session.get(url)
         except ConnectionError as err:
@@ -646,7 +646,7 @@ class CreateDevice:
             # If box is in deep standby, dont raise this
             # over and over.
             if not self.is_offline:
-                message = "{} is unreachable.".format(url)
+                message = f"{url} is unreachable."
                 _LOGGER.warning(message)
                 self.is_offline = True
             return None
@@ -656,15 +656,14 @@ class CreateDevice:
             return response.json()
 
         if response.status_code == 401:
-            raise Exception("Failed to authenticate "
+            raise Exception(f"{url}: Failed to authenticate "
                             "with OpenWebIf "
                             "check your "
                             "username and password.")
         if response.status_code == 404:
-            message = "Got a 404 from {}. Do" \
-                      "you have the OpenWebIf plugin" \
-                      "installed?".format(url)
-            raise Exception(message)
+            raise Exception(f"Got a 404 from {url}. Do"
+                            "you have the OpenWebIf plugin"
+                            "installed?")
 
         _LOGGER.error("Invalid response from "
                       "OpenWebIf: %s", response)
