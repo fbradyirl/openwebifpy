@@ -10,12 +10,13 @@ Licensed under the MIT license.
 
 import logging
 import re
-from random import randint
 import unicodedata
 import urllib
-
 from enum import Enum
+from random import randint
+
 import requests
+
 from openwebif.error import OpenWebIfError, MissingParamError
 
 _LOGGER = logging.getLogger(__name__)
@@ -92,13 +93,6 @@ class CreateDevice:
     Create a new OpenWebIf client device.
     """
 
-    def _get_session(self):
-        session = requests.Session()
-        if self.username is not None and self.password is not None:
-            session.auth = (self.username, self.password)
-
-        return session
-
     # pylint: disable=too-many-arguments, disable=too-many-instance-attributes
     def __init__(self, host=None, port=None,
                  username=None, password=None, is_https=False,
@@ -126,8 +120,9 @@ class CreateDevice:
             _LOGGER.error('Missing Openwebif host!')
             raise MissingParamError('Connection to OpenWebIf failed.', None)
 
-        self.username = username
-        self.password = password
+        self.session = requests.Session()
+        self.session.auth = (username, password)
+
         # Used to build a list of URLs which have been tested to exist
         # (for picons)
         self.cached_urls_which_exist = []
@@ -184,8 +179,8 @@ class CreateDevice:
         """
 
         url = self._base + \
-            URL_MESSAGE.format(
-                str(self.message_display_timeout or -1), message_type.value, requests.utils.quote(text))
+              URL_MESSAGE.format(
+                  str(self.message_display_timeout or -1), message_type.value, requests.utils.quote(text))
         _LOGGER.debug('url: %s', url)
 
         return self._check_reponse_result(self._session.get(url))
@@ -201,7 +196,7 @@ class CreateDevice:
         url = '%s%s%s' % (self._base, URL_SET_VOLUME, str(new_volume))
         _LOGGER.debug('url: %s', url)
 
-        return self._check_reponse_result(self._get_session().get(url))
+        return self._check_reponse_result(self.session.get(url))
 
     def turn_on(self):
         """
@@ -215,7 +210,7 @@ class CreateDevice:
         url = '{}{}{}'.format(self._base, URL_POWERSTATE_BASE, WAKEUP)
         _LOGGER.debug('Wakeup box from standby. url: %s', url)
 
-        result = self._check_reponse_result(self._get_session().get(url))
+        result = self._check_reponse_result(self.session.get(url))
         return result
 
     # pylint: disable=import-outside-toplevel
@@ -242,7 +237,7 @@ class CreateDevice:
         url = '{}{}{}'.format(self._base, URL_POWERSTATE_BASE, STANDBY)
         _LOGGER.debug('Going into standby. url: %s', url)
 
-        result = self._check_reponse_result(self._get_session().get(url))
+        result = self._check_reponse_result(self.session.get(url))
         return result
 
     def deep_standby(self):
@@ -254,7 +249,7 @@ class CreateDevice:
         _LOGGER.debug('url: %s', url)
 
         try:
-            self._get_session().get(url)
+            self.session.get(url)
         # pylint: disable=broad-except
         except Exception:
             # As there is no proper response, an exception
@@ -271,7 +266,7 @@ class CreateDevice:
                           COMMAND_VU_PLAY_PAUSE_TOGGLE)
         _LOGGER.debug('url: %s', url)
 
-        return self._check_reponse_result(self._get_session().get(url))
+        return self._check_reponse_result(self.session.get(url))
 
     def set_channel_up(self):
         """
@@ -282,7 +277,7 @@ class CreateDevice:
                           COMMAND_VU_CHANNEL_UP)
         _LOGGER.debug('url: %s', url)
 
-        return self._check_reponse_result(self._get_session().get(url))
+        return self._check_reponse_result(self.session.get(url))
 
     def set_channel_down(self):
         """
@@ -293,7 +288,7 @@ class CreateDevice:
                           COMMAND_VU_CHANNEL_DOWN)
         _LOGGER.debug('url: %s', url)
 
-        return self._check_reponse_result(self._get_session().get(url))
+        return self._check_reponse_result(self.session.get(url))
 
     def set_stop(self):
         """
@@ -304,7 +299,7 @@ class CreateDevice:
                           COMMAND_VU_STOP)
         _LOGGER.debug('url: %s', url)
 
-        return self._check_reponse_result(self._get_session().get(url))
+        return self._check_reponse_result(self.session.get(url))
 
     def mute_volume(self):
         """
@@ -313,7 +308,7 @@ class CreateDevice:
         url = '%s%s' % (self._base, URL_TOGGLE_VOLUME_MUTE)
         _LOGGER.debug('url: %s', url)
 
-        response = self._get_session().get(url)
+        response = self.session.get(url)
         if response.status_code != 200:
             return False
 
@@ -340,8 +335,6 @@ class CreateDevice:
         """
         self.status_info = self._call_api(f"{self._base}{URL_STATUS_INFO}")
 
-        if not self.mac_address:
-            self.get_version()
         if not self.sources:
             self.sources = self.get_bouquet_sources(
                 bouquet=self.source_bouquet)
@@ -450,7 +443,7 @@ class CreateDevice:
             # e.g.
             # sref: "1:0:19:2887:40F:1:C00000:0:0:0:"
             # url: http://vusolo2/picon/1_0_19_2887_40F_1_C00000_0_0_0.png)
-            picon_file_name = currservice_serviceref.\
+            picon_file_name = currservice_serviceref. \
                 strip(":").replace(":", "_")
             url = '%s/picon/%s.png' % (self._base, picon_file_name)
             _LOGGER.debug('trying picon url (with sref): %s', url)
@@ -501,7 +494,7 @@ class CreateDevice:
             _LOGGER.debug('picon url (already tested): %s', url)
             return True
 
-        request = self._get_session().head(url)
+        request = self.session.head(url)
         if request.status_code == 200:
             self.cached_urls_which_exist.append(url)
             _LOGGER.debug('cached_urls_which_exist: %s',
@@ -635,7 +628,7 @@ class CreateDevice:
         """Perform one api request operation."""
 
         _LOGGER.debug("_call_api : %s", url)
-        response = self._get_session().get(url)
+        response = self.session.get(url)
 
         if response.status_code not in [200]:
             error_msg = "Got {} from {}: {}".format(

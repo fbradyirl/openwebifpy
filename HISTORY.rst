@@ -174,3 +174,7 @@ History
 3.2.0 (2020-12-12)
 ------------------
 * Fix for issues/12
+
+3.2.1 (2021-01-05)
+------------------
+* Only use a single session per device
