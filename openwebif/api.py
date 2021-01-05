@@ -637,7 +637,7 @@ class CreateDevice:
                           f"Enigma2 if required. Error: {err}")
             return None
 
-        _LOGGER.debug("Got {response.status_code} from : %s", url)
+        _LOGGER.debug(f"Got {response.status_code} from : %s", url)
         if response.status_code not in [200]:
             error_msg = "Got {} from {}: {}".format(
                 response.status_code, url, response.text)

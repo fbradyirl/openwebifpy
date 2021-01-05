@@ -175,7 +175,7 @@ History
 ------------------
 * Fix for issues/12
 
-3.2.6 (2021-01-05)
+3.2.7 (2021-01-05)
 ------------------
 * Only use a single session per device
 * Log error on connection error.
