@@ -120,7 +120,7 @@ class CreateDevice:
             raise MissingParamError('Connection to OpenWebIf failed.', None)
 
         _LOGGER.debug(f"Initialising new openwebif client for host: {host}")
-        _LOGGER.debug("{host} Using a single session client.")
+        _LOGGER.debug(f"{host} Using a single session client.")
         self.session = requests.Session()
         self.session.auth = (username, password)
 
@@ -628,16 +628,16 @@ class CreateDevice:
     def _call_api(self, url):
         """Perform one api request operation."""
 
-        _LOGGER.debug("Calling : %s", url)
         try:
             response = self.session.get(url)
-        except ConnectionError as err:
+        except requests.exceptions.ConnectionError as err:
             _LOGGER.error(f"There was a connection error calling {url}"
                           f" Please check the network connection to the Enigma2"
                           f" box is ok and enable debug logging in "
                           f"Enigma2 if required. Error: {err}")
             return None
 
+        _LOGGER.debug("Got {response.status_code} from : %s", url)
         if response.status_code not in [200]:
             error_msg = "Got {} from {}: {}".format(
                 response.status_code, url, response.text)
