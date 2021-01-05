@@ -4,4 +4,4 @@
 
 __author__ = """Finbarr Brady"""
 __email__ = 'fbradyirl@github.io'
-__version__ = '3.2.5'
+__version__ = '3.2.6'
