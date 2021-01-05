@@ -629,7 +629,14 @@ class CreateDevice:
         """Perform one api request operation."""
 
         _LOGGER.debug("_call_api : %s", url)
-        response = self.session.get(url)
+        try:
+            response = self.session.get(url)
+        except ConnectionError as err:
+            _LOGGER.error(f"There was a connection error calling {url}"
+                          f" Please check the network connection to the Enigma2"
+                          f" box is ok and enable debug logging in "
+                          f"Enigma2 if required. Error: {err}")
+            return None
 
         if response.status_code not in [200]:
             error_msg = "Got {} from {}: {}".format(

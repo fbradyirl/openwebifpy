@@ -186,3 +186,7 @@ History
 3.2.3 (2021-01-05)
 ------------------
 * Update logs
+
+3.2.4 (2021-01-05)
+------------------
+* Log error on connection error.
