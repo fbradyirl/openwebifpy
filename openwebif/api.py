@@ -115,6 +115,7 @@ class CreateDevice:
         """
         enable_logging()
         _LOGGER.debug("Initialising new openwebif client")
+        _LOGGER.debug("(Single session client)")
 
         if not host:
             _LOGGER.error('Missing Openwebif host!')

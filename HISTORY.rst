@@ -178,3 +178,7 @@ History
 3.2.1 (2021-01-05)
 ------------------
 * Only use a single session per device
+
+3.2.2 (2021-01-05)
+------------------
+* Add log
