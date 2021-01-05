@@ -114,13 +114,13 @@ class CreateDevice:
         :param message_display_timeout: The display timeout for the notification
         """
         enable_logging()
-        _LOGGER.debug("Initialising new openwebif client")
-        _LOGGER.debug("(Single session client)")
 
         if not host:
             _LOGGER.error('Missing Openwebif host!')
             raise MissingParamError('Connection to OpenWebIf failed.', None)
 
+        _LOGGER.debug(f"Initialising new openwebif client for host: {host}")
+        _LOGGER.debug("{host} Using a single session client.")
         self.session = requests.Session()
         self.session.auth = (username, password)
 
@@ -539,12 +539,12 @@ class CreateDevice:
         result = self._call_api(url)
 
         if self.is_offline or not result:
-            _LOGGER.warning("Cannot get version as box is unreachable.")
+            _LOGGER.warning(f"{self._base}: Cannot get version as box is unreachable.")
             return ''
 
-        _LOGGER.debug("Connected OK.")
+        _LOGGER.debug(f"{self._base}: Connected OK. About Response: {result}")
         version = result['info']['webifver']
-        _LOGGER.debug("OpenWebIf version %s", version)
+        _LOGGER.info(f"{self._base}: OpenWebIf version %s", version)
         # Discover the mac, so we can WOL the box
         # later if needed
         if not self.mac_address:
