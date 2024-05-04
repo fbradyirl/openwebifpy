@@ -2,6 +2,11 @@
 openwebifpy
 ===========
 
+Note
+-----------
+This project is deprecated and you should use the latest fork over at 
+https://github.com/autinerd/openwebifpy
+
 
 .. image:: https://img.shields.io/pypi/v/openwebifpy.svg
         :target: https://pypi.python.org/pypi/openwebifpy
