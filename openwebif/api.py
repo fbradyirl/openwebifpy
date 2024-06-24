@@ -631,10 +631,12 @@ class CreateDevice:
         try:
             response = self.session.get(url)
         except requests.exceptions.ConnectionError as err:
-            _LOGGER.error(f"There was a connection error calling {url}"
+            if not self.is_offline:
+                _LOGGER.error(f"There was a connection error calling {url}"
                           f" Please check the network connection to the Enigma2"
                           f" box is ok and enable debug logging in "
                           f"Enigma2 if required. Error: {err}")
+                self.is_offline = True
             return None
 
         _LOGGER.debug(f"Got {response.status_code} from : %s", url)
@@ -644,11 +646,11 @@ class CreateDevice:
             _LOGGER.error(error_msg)
 
             # If box is in deep standby, dont raise this
-            # over and over.
-            if not self.is_offline:
-                message = f"{url} is unreachable."
-                _LOGGER.warning(message)
-                self.is_offline = True
+            # over and over. (Too late here)
+            #if not self.is_offline:
+            #    message = f"{url} is unreachable."
+            #    _LOGGER.warning(message)
+            #    self.is_offline = True
             return None
 
         self.is_offline = False
